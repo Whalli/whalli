@@ -20,12 +20,18 @@ COPY packages/types/package.json ./packages/types/
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --prefer-offline
 
+# Generate Prisma client (needed for Better Auth)
+FROM deps AS prisma
+WORKDIR /app
+COPY apps/api/prisma ./apps/api/prisma
+RUN cd apps/api && pnpm prisma generate
+
 # Builder stage
 FROM base AS builder
 WORKDIR /app
 
-# Copy ALL from deps (includes node_modules structure + pnpm links)
-COPY --from=deps /app ./
+# Copy ALL from prisma stage (includes deps + Prisma client)
+COPY --from=prisma /app ./
 
 # Copy workspace configuration and source code
 COPY turbo.json ./
