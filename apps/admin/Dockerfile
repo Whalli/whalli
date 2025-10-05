@@ -24,10 +24,16 @@ WORKDIR /app
 # Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy source code
-COPY . .
+# Copy workspace configuration
+COPY pnpm-workspace.yaml turbo.json package.json ./
 
-# Build the app
+# Copy packages source code (needed for internal dependencies)
+COPY packages ./packages
+
+# Copy app source code
+COPY apps/admin ./apps/admin
+
+# Build the app (Turborepo will build dependencies first)
 RUN pnpm build --filter=@whalli/admin
 
 # Runner stage
@@ -48,7 +54,7 @@ USER nextjs
 
 EXPOSE 3002
 
-ENV PORT 3002
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3002
+ENV HOSTNAME="0.0.0.0"
 
 CMD ["node", "apps/admin/server.js"]

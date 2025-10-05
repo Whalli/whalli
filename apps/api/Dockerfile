@@ -31,10 +31,16 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=prisma /app/node_modules/.prisma ./node_modules/.prisma
 
-# Copy source code
-COPY . .
+# Copy workspace configuration
+COPY pnpm-workspace.yaml turbo.json package.json ./
 
-# Build the app
+# Copy packages source code (needed for internal dependencies)
+COPY packages ./packages
+
+# Copy app source code and prisma schema
+COPY apps/api ./apps/api
+
+# Build the app (Turborepo will build dependencies first)
 RUN pnpm build --filter=@whalli/api
 
 # Runner stage
@@ -56,6 +62,6 @@ USER nestjs
 
 EXPOSE 3001
 
-ENV PORT 3001
+ENV PORT=3001
 
 CMD ["node", "apps/api/dist/main.js"]
