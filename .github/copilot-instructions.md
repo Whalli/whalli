@@ -250,6 +250,9 @@ Complete observability stack with Winston, Prometheus, and Grafana:
 ### 🚀 CI/CD Deployment Pipeline (`.github/workflows/*`)
 Automated deployment with GitHub Actions:
 - **CI/CD Workflow** (`ci-cd.yml`): Lint, test, build, Docker image push to GHCR
+  - **Organization Registry**: Images stored in `ghcr.io/whalli/*` (organization account)
+  - **Semantic Versioning**: Automatic tagging with branch, sha, version tags
+  - **Matrix Strategy**: Builds 3 apps (web, api, admin) in parallel
 - **Deployment Workflow** (`deploy.yml`): SSH-based production deployment with Prisma migrations
 - **Automated Steps**: Code checkout → Build → Start services → **Prisma migrations** → Health checks → Rollback on failure
 - **Secrets Management**: 21 GitHub secrets (DATABASE_URL, REDIS_URL, JWT, Stripe, AI keys, MinIO, etc.)
@@ -257,7 +260,7 @@ Automated deployment with GitHub Actions:
 - **Database Migrations**: `docker-compose exec -T api npx prisma migrate deploy` against Neon Postgres
 - **Triggers**: Push to main (automatic) OR manual workflow_dispatch (staging/production choice)
 - **Verification**: Local + remote health checks, deployment status monitoring
-- Complete documentation: `GITHUB_ACTIONS_DEPLOYMENT.md`, `GITHUB_SECRETS_CHECKLIST.md`, `GITHUB_ACTIONS_SUMMARY.md`, `GITHUB_ACTIONS_VISUAL_GUIDE.md`
+- Complete documentation: `GITHUB_ACTIONS_DEPLOYMENT.md`, `GITHUB_SECRETS_CHECKLIST.md`, `GITHUB_ACTIONS_SUMMARY.md`, `GITHUB_ACTIONS_VISUAL_GUIDE.md`, `GITHUB_PACKAGES_MIGRATION.md`
 
 ### 🚦 Rate Limiting & Workers (`apps/api/src/common/guards/*`, `apps/api/src/workers/*`)
 Redis-based rate limiting with separated BullMQ workers:
@@ -352,9 +355,23 @@ Located in `apps/api/scripts/`:
 ### CI/CD & GitHub Actions
 - `.github/workflows/deploy.yml` - Production deployment workflow with Prisma migrations (150+ lines)
 - `GITHUB_ACTIONS_DEPLOYMENT.md` - Complete GitHub Actions setup guide (800+ lines)
-- `GITHUB_SECRETS_CHECKLIST.md` - Secrets configuration checklist (18 secrets, 400+ lines)
+- `GITHUB_SECRETS_CHECKLIST.md` - Secrets configuration checklist (21 secrets, 400+ lines)
 - `GITHUB_ACTIONS_SUMMARY.md` - Quick reference and benefits overview (300+ lines)
 - `GITHUB_ACTIONS_VISUAL_GUIDE.md` - Visual diagrams and flowcharts (600+ lines, 9 diagrams)
+- `GITHUB_PACKAGES_MIGRATION.md` - Organization registry migration guide (800+ lines)
+
+### GitHub Secrets Configuration (NEW)
+- `GITHUB_SECRETS_INDEX.md` - Navigation hub for all secrets documentation
+- `GITHUB_SECRETS_SUMMARY.md` - Complete summary in French (18/21 secrets configured)
+- `GITHUB_SECRETS_STATUS.md` - Detailed status and current values (masked)
+- `GITHUB_SECRETS_VISUAL_GUIDE.md` - Visual architecture and flow diagrams
+- `GITHUB_SECRETS_RECAP.md` - Final recap with commit suggestions
+- `scripts/auto-setup-secrets.sh` - Automatic setup of 18 secrets (executed)
+- `scripts/add-server-secrets.sh` - Interactive server secrets configuration (pending)
+- `scripts/setup-github-secrets.sh` - Complete manual configuration
+- `scripts/quick-setup-secrets.sh` - Hybrid auto/manual setup
+- `scripts/show-help.sh` - Quick help and instructions
+- `scripts/README.md` - Complete scripts documentation (7 scripts)
 
 ### Database
 - `apps/api/scripts/README.md` - Database setup scripts
