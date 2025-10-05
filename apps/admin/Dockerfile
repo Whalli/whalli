@@ -39,7 +39,7 @@ COPY packages ./packages
 COPY apps/admin ./apps/admin
 
 # Copy Prisma Client from prisma stage (after sources to avoid overwrite)
-COPY --from=prisma /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=prisma /app/node_modules ./node_modules
 
 # Build the app (Turborepo will build dependencies first)
 RUN pnpm build --filter=@whalli/admin
