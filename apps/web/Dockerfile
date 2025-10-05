@@ -9,7 +9,8 @@ FROM base AS deps
 WORKDIR /app
 
 # Copy package files
-COPY package.json pnpm-lock.yaml* .npmrc ./
+COPY package.json pnpm-lock.yaml .npmrc* ./
+COPY pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/
 COPY packages/*/package.json ./packages/*/
 
@@ -21,16 +22,12 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 FROM base AS builder
 WORKDIR /app
 
-# Copy dependencies
-COPY --from=deps /app/node_modules ./node_modules
+# Copy ALL from deps (includes node_modules structure + pnpm links)
+COPY --from=deps /app ./
 
-# Copy workspace configuration
-COPY pnpm-workspace.yaml turbo.json package.json ./
-
-# Copy packages source code (needed for internal dependencies)
+# Copy workspace configuration and source code
+COPY turbo.json ./
 COPY packages ./packages
-
-# Copy app source code
 COPY apps/web ./apps/web
 
 # Build the app (Turborepo will build dependencies first)

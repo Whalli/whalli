@@ -9,7 +9,8 @@ FROM base AS deps
 WORKDIR /app
 
 # Copy package files
-COPY package.json pnpm-lock.yaml* .npmrc ./
+COPY package.json pnpm-lock.yaml .npmrc* ./
+COPY pnpm-workspace.yaml ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/*/package.json ./packages/*/
 
@@ -27,17 +28,12 @@ RUN cd apps/api && pnpm prisma generate
 FROM base AS builder
 WORKDIR /app
 
-# Copy dependencies and prisma client
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=prisma /app/node_modules/.prisma ./node_modules/.prisma
+# Copy ALL from prisma stage (includes deps + prisma client)
+COPY --from=prisma /app ./
 
-# Copy workspace configuration
-COPY pnpm-workspace.yaml turbo.json package.json ./
-
-# Copy packages source code (needed for internal dependencies)
+# Copy workspace configuration and source code
+COPY turbo.json ./
 COPY packages ./packages
-
-# Copy app source code and prisma schema
 COPY apps/api ./apps/api
 
 # Build the app (Turborepo will build dependencies first)
