@@ -1,0 +1,340 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v3.0
+    container_name: whalli-traefik
+    restart: unless-stopped
+    command:
+      - --api.dashboard=true
+      - --api.debug=true
+      - --log.level=INFO
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-letsencrypt:/letsencrypt
+    networks:
+      - whalli-network
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN}`)
+      - traefik.http.routers.traefik.entrypoints=websecure
+      - traefik.http.routers.traefik.tls.certresolver=letsencrypt
+      - traefik.http.routers.traefik.service=api@internal
+      - traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_AUTH}
+      - traefik.http.routers.traefik.middlewares=traefik-auth
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: whalli-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - whalli-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  redis:
+    image: redis:7-alpine
+    container_name: whalli-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    networks:
+      - whalli-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  minio:
+    image: minio/minio:latest
+    container_name: whalli-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio-data:/data
+    networks:
+      - whalli-network
+    labels:
+      - traefik.enable=true
+      # MinIO API
+      - traefik.http.routers.minio-api.rule=Host(`storage.${DOMAIN}`)
+      - traefik.http.routers.minio-api.entrypoints=websecure
+      - traefik.http.routers.minio-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.minio-api.service=minio-api
+      - traefik.http.services.minio-api.loadbalancer.server.port=9000
+      # MinIO Console
+      - traefik.http.routers.minio-console.rule=Host(`minio.${DOMAIN}`)
+      - traefik.http.routers.minio-console.entrypoints=websecure
+      - traefik.http.routers.minio-console.tls.certresolver=letsencrypt
+      - traefik.http.routers.minio-console.service=minio-console
+      - traefik.http.services.minio-console.loadbalancer.server.port=9001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  api:
+    build:
+      context: .
+      dockerfile: ./apps/api/Dockerfile
+    container_name: whalli-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_URL: https://web.${DOMAIN}
+      ADMIN_URL: https://admin.${DOMAIN}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - whalli-network
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.api.rule=Host(`api.${DOMAIN}`)
+      - traefik.http.routers.api.entrypoints=websecure
+      - traefik.http.routers.api.tls.certresolver=letsencrypt
+      - traefik.http.services.api.loadbalancer.server.port=3001
+      # CORS middleware
+      - traefik.http.middlewares.api-cors.headers.accesscontrolallowmethods=GET,OPTIONS,PUT,POST,DELETE,PATCH
+      - traefik.http.middlewares.api-cors.headers.accesscontrolallowheaders=*
+      - traefik.http.middlewares.api-cors.headers.accesscontrolalloworiginlist=https://web.${DOMAIN},https://admin.${DOMAIN}
+      - traefik.http.middlewares.api-cors.headers.accesscontrolmaxage=100
+      - traefik.http.middlewares.api-cors.headers.addvaryheader=true
+      - traefik.http.routers.api.middlewares=api-cors
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  workers:
+    build:
+      context: .
+      dockerfile: ./apps/api/Dockerfile.workers
+    container_name: whalli-workers
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - whalli-network
+
+  web:
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile
+    container_name: whalli-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      NEXTAUTH_URL: https://web.${DOMAIN}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      API_URL: https://api.${DOMAIN}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+    depends_on:
+      - api
+    networks:
+      - whalli-network
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.web.rule=Host(`web.${DOMAIN}`) || Host(`${DOMAIN}`)
+      - traefik.http.routers.web.entrypoints=websecure
+      - traefik.http.routers.web.tls.certresolver=letsencrypt
+      - traefik.http.services.web.loadbalancer.server.port=3000
+      # Redirect HTTP to HTTPS
+      - traefik.http.routers.web-http.rule=Host(`web.${DOMAIN}`) || Host(`${DOMAIN}`)
+      - traefik.http.routers.web-http.entrypoints=web
+      - traefik.http.routers.web-http.middlewares=web-redirect
+      - traefik.http.middlewares.web-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.web-redirect.redirectscheme.permanent=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  admin:
+    build:
+      context: .
+      dockerfile: ./apps/admin/Dockerfile
+    container_name: whalli-admin
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      NEXTAUTH_URL: https://admin.${DOMAIN}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      API_URL: https://api.${DOMAIN}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+    depends_on:
+      - api
+    networks:
+      - whalli-network
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.admin.rule=Host(`admin.${DOMAIN}`)
+      - traefik.http.routers.admin.entrypoints=websecure
+      - traefik.http.routers.admin.tls.certresolver=letsencrypt
+      - traefik.http.services.admin.loadbalancer.server.port=3002
+      # Redirect HTTP to HTTPS
+      - traefik.http.routers.admin-http.rule=Host(`admin.${DOMAIN}`)
+      - traefik.http.routers.admin-http.entrypoints=web
+      - traefik.http.routers.admin-http.middlewares=admin-redirect
+      - traefik.http.middlewares.admin-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.admin-redirect.redirectscheme.permanent=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: whalli-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - whalli-network
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN}`)
+      - traefik.http.routers.prometheus.entrypoints=websecure
+      - traefik.http.routers.prometheus.tls.certresolver=letsencrypt
+      - traefik.http.services.prometheus.loadbalancer.server.port=9090
+      - traefik.http.middlewares.prometheus-auth.basicauth.users=${PROMETHEUS_AUTH}
+      - traefik.http.routers.prometheus.middlewares=prometheus-auth
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: whalli-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_SERVER_ROOT_URL: https://grafana.${DOMAIN}
+      GF_INSTALL_PLUGINS: ''
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+    depends_on:
+      - prometheus
+    networks:
+      - whalli-network
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN}`)
+      - traefik.http.routers.grafana.entrypoints=websecure
+      - traefik.http.routers.grafana.tls.certresolver=letsencrypt
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  minio-data:
+    driver: local
+  traefik-letsencrypt:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  whalli-network:
+    driver: bridge

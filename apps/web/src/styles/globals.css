@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Hind+Vadodara:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Deep Ocean Theme - Light Mode */
+    --theme-name: 'deep-ocean';
+    
+    /* Primary - Bright Blue (#0801DA) - Main brand color */
+    --primary: 242 99% 43%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Background - Lavender/Light Gray */
+    --background: 240 25% 95%;
+    --foreground: 240 10% 15%;
+    
+    /* Sidebar Primary - Deep Blue (#040069) - Navigation sidebar */
+    --sidebar: 242 100% 21%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-hover: 242 100% 25%;
+    --sidebar-active: 242 100% 30%;
+    
+    /* Card/Surface */
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 15%;
+    
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 15%;
+    
+    /* Secondary */
+    --secondary: 240 15% 92%;
+    --secondary-foreground: 240 10% 20%;
+    
+    /* Muted */
+    --muted: 240 15% 90%;
+    --muted-foreground: 240 10% 50%;
+    
+    /* Accent */
+    --accent: 242 100% 60%;
+    --accent-foreground: 0 0% 100%;
+    
+    /* Destructive */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Success */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    
+    /* Warning */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    
+    /* Border */
+    --border: 240 15% 85%;
+    --input: 240 15% 90%;
+    --ring: 242 100% 21%;
+    
+    /* Radius */
+    --radius: 0.75rem;
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+  }
+
+  .dark {
+    /* Dark mode support - Future implementation */
+    --background: 240 20% 10%;
+    --foreground: 0 0% 95%;
+    
+    --card: 240 20% 12%;
+    --card-foreground: 0 0% 95%;
+    
+    --popover: 240 20% 12%;
+    --popover-foreground: 0 0% 95%;
+    
+    --primary: 242 100% 40%;
+    --primary-foreground: 0 0% 100%;
+    
+    --sidebar: 240 20% 8%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-hover: 240 20% 12%;
+    --sidebar-active: 242 100% 25%;
+    
+    --secondary: 240 20% 15%;
+    --secondary-foreground: 0 0% 90%;
+    
+    --muted: 240 20% 20%;
+    --muted-foreground: 240 10% 60%;
+    
+    --accent: 242 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    
+    --border: 240 20% 25%;
+    --input: 240 20% 20%;
+    --ring: 242 100% 40%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

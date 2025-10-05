@@ -1,0 +1,8 @@
+{
+  "extends": "@whalli/config/tsconfig-library.json",
+  "compilerOptions": {
+    "jsx": "react-jsx"
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
+}

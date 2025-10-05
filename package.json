@@ -1,0 +1,30 @@
+{
+  "name": "whalli",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Turborepo monorepo with Next.js, NestJS, and shared packages",
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev --parallel",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "type-check": "turbo type-check",
+    "clean": "turbo clean",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "turbo build --filter=!./packages/eslint-config --filter=!./packages/prettier-config && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.1",
+    "@types/node": "^20.11.24",
+    "prettier": "^3.2.5",
+    "turbo": "^2.5.8",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}

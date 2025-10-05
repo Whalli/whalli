@@ -1,0 +1,164 @@
+name: Production Deployment
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        
+    - name: Add server to known hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+        
+    - name: Deploy to server
+      env:
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        REDIS_URL: ${{ secrets.REDIS_URL }}
+        REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+        STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+        STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+        MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+        MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+        MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+        MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+        GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        DOMAIN: ${{ secrets.DOMAIN }}
+        ACME_EMAIL: ${{ secrets.ACME_EMAIL }}
+      run: |
+        ssh $SERVER_USER@$SERVER_HOST << 'ENDSSH'
+          set -e
+          
+          echo "📦 Pulling latest code..."
+          cd /opt/whalli
+          git fetch origin
+          git reset --hard origin/main
+          
+          echo "🔧 Creating .env file..."
+          cat > .env << EOF
+        # Database
+        DATABASE_URL=${{ secrets.DATABASE_URL }}
+        
+        # Redis
+        REDIS_URL=${{ secrets.REDIS_URL }}
+        REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+        
+        # Authentication
+        JWT_SECRET=${{ secrets.JWT_SECRET }}
+        BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET }}
+        
+        # Stripe
+        STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+        STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+        
+        # AI Providers
+        OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+        ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+        XAI_API_KEY=${{ secrets.XAI_API_KEY }}
+        
+        # MinIO (S3-compatible storage)
+        MINIO_ROOT_USER=${{ secrets.MINIO_ROOT_USER }}
+        MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}
+        MINIO_ACCESS_KEY=${{ secrets.MINIO_ACCESS_KEY }}
+        MINIO_SECRET_KEY=${{ secrets.MINIO_SECRET_KEY }}
+        MINIO_BUCKET=whalli-uploads
+        MINIO_ENDPOINT=http://minio:9000
+        MINIO_PUBLIC_ENDPOINT=https://storage.${{ secrets.DOMAIN }}
+        
+        # Monitoring
+        GRAFANA_ADMIN_USER=admin
+        GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        
+        # Domain & SSL
+        DOMAIN=${{ secrets.DOMAIN }}
+        ACME_EMAIL=${{ secrets.ACME_EMAIL }}
+        
+        # Application
+        RATE_LIMIT_ENABLED=true
+        NODE_ENV=production
+        PORT=3001
+        EOF
+          
+          echo "🏗️ Building Docker images..."
+          docker-compose -f docker-compose.prod.yml build --no-cache
+          
+          echo "🚀 Starting services..."
+          docker-compose -f docker-compose.prod.yml up -d
+          
+          echo "⏳ Waiting for services to be ready..."
+          sleep 30
+          
+          echo "🗄️ Running Prisma migrations..."
+          docker-compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
+          
+          echo "✅ Verifying deployment..."
+          docker-compose -f docker-compose.prod.yml ps
+          
+          echo "📊 Checking service health..."
+          curl -f http://localhost:3001/api/health || echo "⚠️ API health check failed"
+          
+          echo "🎉 Deployment completed successfully!"
+        ENDSSH
+        
+    - name: Verify deployment
+      run: |
+        echo "🔍 Verifying deployment at https://${{ secrets.DOMAIN }}"
+        curl -f https://api.${{ secrets.DOMAIN }}/api/health || exit 1
+        
+    - name: Notify on success
+      if: success()
+      run: |
+        echo "✅ Deployment to ${{ github.event.inputs.environment || 'production' }} successful!"
+        
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "❌ Deployment to ${{ github.event.inputs.environment || 'production' }} failed!"
+        
+    - name: Rollback on failure
+      if: failure()
+      env:
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+      run: |
+        ssh $SERVER_USER@$SERVER_HOST << 'ENDSSH'
+          set -e
+          
+          echo "🔄 Rolling back deployment..."
+          cd /opt/whalli
+          git reset --hard HEAD~1
+          docker-compose -f docker-compose.prod.yml up -d
+          
+          echo "✅ Rollback completed"
+        ENDSSH

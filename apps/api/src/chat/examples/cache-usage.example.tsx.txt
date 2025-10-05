@@ -1,0 +1,382 @@
+/**
+ * Example: Chat with Redis Caching
+ * 
+ * This example demonstrates how the chat system automatically uses Redis caching
+ * to reduce costs and improve response times for identical requests.
+ */
+
+// Frontend Example (React/Next.js)
+async function sendChatMessage(modelId: string, prompt: string) {
+  const response = await fetch('http://localhost:3001/api/chat/stream', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('token')}`,
+    },
+    body: JSON.stringify({
+      modelId,
+      prompt,
+    }),
+  });
+
+  if (!response.body) {
+    throw new Error('No response body');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  let fullResponse = '';
+  let isCached = false;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    
+    if (done) break;
+
+    const chunk = decoder.decode(value);
+    const lines = chunk.split('\n\n');
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = JSON.parse(line.slice(6));
+
+        switch (data.type) {
+          case 'cache_hit':
+            console.log('✨ Response from cache!');
+            isCached = true;
+            break;
+
+          case 'chunk':
+            fullResponse += data.data.content;
+            // Update UI with new content
+            appendToChat(data.data.content);
+            break;
+
+          case 'complete':
+            console.log(`✅ Complete! (${data.data.fromCache ? 'from cache' : 'from AI'})`);
+            console.log(`Response time: ${isCached ? '~100ms' : '~2500ms'}`);
+            break;
+
+          case 'error':
+            console.error('❌ Error:', data.data.message);
+            break;
+        }
+      }
+    }
+  }
+
+  return fullResponse;
+}
+
+// Example: First request (cache miss)
+console.log('Sending first request...');
+await sendChatMessage('gpt-4-turbo', 'What is artificial intelligence?');
+// Logs:
+// → Sending first request...
+// → ✅ Complete! (from AI)
+// → Response time: ~2500ms
+
+// Example: Second identical request (cache hit)
+console.log('Sending identical request...');
+await sendChatMessage('gpt-4-turbo', 'What is artificial intelligence?');
+// Logs:
+// → Sending identical request...
+// → ✨ Response from cache!
+// → ✅ Complete! (from cache)
+// → Response time: ~100ms
+
+// Example: Different prompt (cache miss)
+console.log('Sending different request...');
+await sendChatMessage('gpt-4-turbo', 'What is machine learning?');
+// Logs:
+// → Sending different request...
+// → ✅ Complete! (from AI)
+// → Response time: ~2500ms
+
+// Backend Example (NestJS Controller)
+import { Controller, Post, Body, Sse, UseGuards } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { ChatService } from './chat.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+
+@Controller('chat')
+export class ChatController {
+  constructor(private chatService: ChatService) {}
+
+  @Post('stream')
+  @UseGuards(JwtAuthGuard)
+  @Sse()
+  async streamChat(
+    @CurrentUser() user: any,
+    @Body() body: { modelId: string; prompt: string; projectId?: string; taskId?: string },
+  ) {
+    return new Observable((subscriber) => {
+      (async () => {
+        try {
+          // ChatService automatically checks cache and streams response
+          for await (const event of this.chatService.streamChatResponse({
+            userId: user.id,
+            modelId: body.modelId,
+            prompt: body.prompt,
+            projectId: body.projectId,
+            taskId: body.taskId,
+          })) {
+            subscriber.next({ data: event });
+          }
+          subscriber.complete();
+        } catch (error) {
+          subscriber.error(error);
+        }
+      })();
+    });
+  }
+}
+
+// Cache Statistics Example
+import { Injectable } from '@nestjs/common';
+import { ChatCacheService } from './chat-cache.service';
+
+@Injectable()
+export class ChatAnalyticsService {
+  constructor(private chatCache: ChatCacheService) {}
+
+  async getCachePerformance() {
+    const stats = await this.chatCache.getCacheStats();
+    
+    return {
+      totalCachedResponses: stats.totalKeys,
+      ttl: stats.ttl,
+      estimatedSavings: this.calculateSavings(stats.totalKeys),
+    };
+  }
+
+  private calculateSavings(cacheHits: number) {
+    const avgCostPerRequest = 0.03; // $0.03 for GPT-4
+    const savedCalls = cacheHits - 1; // Subtract the initial call
+    const totalSavings = savedCalls * avgCostPerRequest;
+
+    return {
+      savedAPICalls: savedCalls,
+      savedCost: `$${totalSavings.toFixed(2)}`,
+      percentageSaved: savedCalls > 0 ? 99 : 0,
+    };
+  }
+}
+
+// Admin Cache Management Example
+@Controller('admin/cache')
+@UseGuards(JwtAuthGuard, AdminGuard)
+export class AdminCacheController {
+  constructor(private chatCache: ChatCacheService) {}
+
+  @Get('stats')
+  async getStats() {
+    return this.chatCache.getCacheStats();
+  }
+
+  @Delete('clear')
+  async clearCache() {
+    await this.chatCache.clearAllCache();
+    return { message: 'Cache cleared successfully' };
+  }
+
+  @Delete(':modelId/:prompt')
+  async invalidateEntry(
+    @Param('modelId') modelId: string,
+    @Param('prompt') prompt: string,
+  ) {
+    await this.chatCache.invalidateCache(modelId, prompt);
+    return { message: 'Cache entry invalidated' };
+  }
+}
+
+// Testing Example
+describe('Chat Cache Integration', () => {
+  it('should use cache for identical requests', async () => {
+    const request = {
+      userId: 'user_123',
+      modelId: 'gpt-4-turbo',
+      prompt: 'What is the capital of France?',
+    };
+
+    // First request - cache miss
+    const events1 = [];
+    for await (const event of chatService.streamChatResponse(request)) {
+      events1.push(event);
+    }
+
+    const cacheHitEvent1 = events1.find(e => e.type === 'cache_hit');
+    expect(cacheHitEvent1).toBeUndefined();
+
+    const completeEvent1 = events1.find(e => e.type === 'complete');
+    expect(completeEvent1.data.fromCache).toBe(false);
+
+    // Second request - cache hit
+    const events2 = [];
+    for await (const event of chatService.streamChatResponse(request)) {
+      events2.push(event);
+    }
+
+    const cacheHitEvent2 = events2.find(e => e.type === 'cache_hit');
+    expect(cacheHitEvent2).toBeDefined();
+
+    const completeEvent2 = events2.find(e => e.type === 'complete');
+    expect(completeEvent2.data.fromCache).toBe(true);
+    expect(completeEvent2.data.fullResponse).toBe(completeEvent1.data.fullResponse);
+  });
+});
+
+// Performance Comparison Example
+async function compareCachePerformance() {
+  const prompt = 'Explain quantum computing';
+  const iterations = 100;
+
+  // Warmup (first request - cache miss)
+  console.log('Warmup request...');
+  const warmupStart = Date.now();
+  await sendChatMessage('gpt-4-turbo', prompt);
+  const warmupTime = Date.now() - warmupStart;
+  console.log(`Warmup time (cache miss): ${warmupTime}ms`);
+
+  // Cached requests
+  console.log(`\nRunning ${iterations} cached requests...`);
+  const start = Date.now();
+
+  for (let i = 0; i < iterations; i++) {
+    await sendChatMessage('gpt-4-turbo', prompt);
+  }
+
+  const totalTime = Date.now() - start;
+  const avgTime = totalTime / iterations;
+
+  console.log('\n📊 Performance Results:');
+  console.log(`─────────────────────────────────────`);
+  console.log(`Total requests: ${iterations + 1}`);
+  console.log(`Cache miss time: ${warmupTime}ms`);
+  console.log(`Cache hit avg time: ${avgTime.toFixed(0)}ms`);
+  console.log(`Speed improvement: ${(warmupTime / avgTime).toFixed(1)}x`);
+  console.log(`API calls saved: ${iterations} (${((iterations / (iterations + 1)) * 100).toFixed(1)}%)`);
+  console.log(`Cost saved: $${(iterations * 0.03).toFixed(2)}`);
+
+  // Expected output:
+  // 📊 Performance Results:
+  // ─────────────────────────────────────
+  // Total requests: 101
+  // Cache miss time: 2500ms
+  // Cache hit avg time: 93ms
+  // Speed improvement: 27x
+  // API calls saved: 100 (99.0%)
+  // Cost saved: $3.00
+}
+
+// Real-world Usage Example (React Component)
+import { useState, useEffect } from 'react';
+
+function ChatInterface() {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [model, setModel] = useState('gpt-4-turbo');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [isCached, setIsCached] = useState(false);
+
+  const sendMessage = async () => {
+    setIsStreaming(true);
+    setIsCached(false);
+
+    // Add user message
+    setMessages(prev => [...prev, { role: 'user', content: input }]);
+
+    const response = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({
+        modelId: model,
+        prompt: input,
+      }),
+    });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let aiMessage = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n\n');
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = JSON.parse(line.slice(6));
+
+          if (data.type === 'cache_hit') {
+            setIsCached(true);
+          } else if (data.type === 'chunk') {
+            aiMessage += data.data.content;
+            setMessages(prev => {
+              const newMessages = [...prev];
+              const lastMessage = newMessages[newMessages.length - 1];
+              if (lastMessage?.role === 'assistant') {
+                lastMessage.content = aiMessage;
+              } else {
+                newMessages.push({ role: 'assistant', content: aiMessage });
+              }
+              return newMessages;
+            });
+          } else if (data.type === 'complete') {
+            setIsStreaming(false);
+          }
+        }
+      }
+    }
+
+    setInput('');
+  };
+
+  return (
+    <div className="chat-interface">
+      <div className="messages">
+        {messages.map((msg, i) => (
+          <div key={i} className={`message ${msg.role}`}>
+            {msg.content}
+          </div>
+        ))}
+      </div>
+
+      {isCached && (
+        <div className="cache-indicator">
+          ✨ Response from cache (instant)
+        </div>
+      )}
+
+      <div className="input-area">
+        <select value={model} onChange={(e) => setModel(e.target.value)}>
+          <option value="gpt-4-turbo">GPT-4 Turbo</option>
+          <option value="claude-3-opus">Claude 3 Opus</option>
+          <option value="grok-2">Grok 2</option>
+        </select>
+
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+          placeholder="Ask anything..."
+          disabled={isStreaming}
+        />
+
+        <button onClick={sendMessage} disabled={isStreaming}>
+          {isStreaming ? 'Sending...' : 'Send'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default ChatInterface;

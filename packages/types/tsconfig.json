@@ -1,0 +1,5 @@
+{
+  "extends": "@whalli/config/tsconfig-library.json",
+  "include": ["index.ts"],
+  "exclude": ["node_modules", "dist"]
+}

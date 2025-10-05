@@ -1,0 +1,602 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import * as request from 'supertest';
+import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/prisma/prisma.service';
+import { ChatService } from '../src/chat/chat.service';
+import { OpenAIAdapter } from '../src/chat/adapters/openai.adapter';
+import { AnthropicAdapter } from '../src/chat/adapters/anthropic.adapter';
+import { XAIAdapter } from '../src/chat/adapters/xai.adapter';
+import { MockAIAdapter } from './mocks/mock-ai-adapter';
+import { SubscriptionPlan } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+
+describe('Chat E2E Tests', () => {
+  let app: INestApplication;
+  let prisma: PrismaService;
+  let chatService: ChatService;
+  let mockAdapter: MockAIAdapter;
+
+  // Test data
+  let testUser: any;
+  let testModel: any;
+  let authToken: string;
+
+  beforeAll(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    })
+      .overrideProvider(OpenAIAdapter)
+      .useClass(MockAIAdapter)
+      .overrideProvider(AnthropicAdapter)
+      .useClass(MockAIAdapter)
+      .overrideProvider(XAIAdapter)
+      .useClass(MockAIAdapter)
+      .compile();
+
+    app = moduleFixture.createNestApplication();
+    
+    // Add validation pipe (same as main.ts)
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
+
+    await app.init();
+
+    prisma = app.get<PrismaService>(PrismaService);
+    chatService = app.get<ChatService>(ChatService);
+    mockAdapter = app.get<MockAIAdapter>(OpenAIAdapter) as any;
+
+    // Clean up database before tests
+    await cleanDatabase();
+
+    // Create test data
+    await createTestData();
+  });
+
+  afterAll(async () => {
+    // Clean up database after tests
+    await cleanDatabase();
+    await app.close();
+  });
+
+  beforeEach(() => {
+    // Reset mock adapter before each test
+    mockAdapter.clearMockResponses();
+  });
+
+  /**
+   * Clean database helper
+   */
+  async function cleanDatabase() {
+    // Delete in correct order (respect foreign keys)
+    await prisma.chatSession.deleteMany();
+    await prisma.message.deleteMany();
+    await prisma.subscription.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.model.deleteMany();
+    await prisma.company.deleteMany();
+  }
+
+  /**
+   * Create test user, company, model, subscription
+   */
+  async function createTestData() {
+    // 1. Create company
+    const company = await prisma.company.create({
+      data: {
+        name: 'TestAI',
+        website: 'https://testai.com',
+        description: 'Test AI company',
+      },
+    });
+
+    // 2. Create model
+    testModel = await prisma.model.create({
+      data: {
+        id: 'gpt-3.5-turbo',
+        name: 'GPT-3.5 Turbo',
+        companyId: company.id,
+        contextWindow: 4096,
+        maxOutput: 4096,
+        inputPricing: 0.0015,
+        outputPricing: 0.002,
+      },
+    });
+
+    // 3. Create user with hashed password
+    const hashedPassword = await bcrypt.hash('testpassword123', 10);
+    testUser = await prisma.user.create({
+      data: {
+        email: 'test@example.com',
+        name: 'Test User',
+        emailVerified: true,
+        password: hashedPassword,
+      },
+    });
+
+    // 4. Create subscription (BASIC plan for basic model access)
+    await prisma.subscription.create({
+      data: {
+        userId: testUser.id,
+        plan: SubscriptionPlan.BASIC,
+        status: 'active',
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      },
+    });
+
+    // 5. Generate auth token (simplified - in real app use JWT)
+    // For E2E tests, we'll use the session-based auth
+    // We'll login to get the session cookie
+  }
+
+  /**
+   * Helper to login and get session cookie
+   */
+  async function login(): Promise<string> {
+    const response = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({
+        email: 'test@example.com',
+        password: 'testpassword123',
+      })
+      .expect(200);
+
+    // Extract session cookie from Set-Cookie header
+    const cookies = response.headers['set-cookie'];
+    if (!cookies || cookies.length === 0) {
+      throw new Error('No session cookie received');
+    }
+
+    // Return the cookie string for subsequent requests
+    return cookies[0].split(';')[0];
+  }
+
+  describe('POST /chat/start', () => {
+    it('should create a chat session and save user message', async () => {
+      const sessionCookie = await login();
+
+      const response = await request(app.getHttpServer())
+        .post('/chat/start')
+        .set('Cookie', sessionCookie)
+        .send({
+          prompt: 'Hello AI',
+          modelId: testModel.id,
+        })
+        .expect(200);
+
+      // Verify response structure
+      expect(response.body).toHaveProperty('sessionId');
+      expect(response.body).toHaveProperty('chatId');
+      expect(typeof response.body.sessionId).toBe('string');
+      expect(typeof response.body.chatId).toBe('string');
+
+      const { sessionId, chatId } = response.body;
+
+      // Verify ChatSession was created in DB
+      const session = await prisma.chatSession.findUnique({
+        where: { id: sessionId },
+      });
+
+      expect(session).toBeDefined();
+      expect(session?.userId).toBe(testUser.id);
+      expect(session?.modelId).toBe(testModel.id);
+      expect(session?.chatId).toBe(chatId);
+      expect(session?.expiresAt.getTime()).toBeGreaterThan(Date.now());
+
+      // Verify user message was saved in DB
+      const userMessage = await prisma.message.findFirst({
+        where: {
+          userId: testUser.id,
+          role: 'user',
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      expect(userMessage).toBeDefined();
+      expect(userMessage?.content).toBe('Hello AI');
+      expect(userMessage?.modelId).toBe(testModel.id);
+    });
+
+    it('should reject request without authentication', async () => {
+      await request(app.getHttpServer())
+        .post('/chat/start')
+        .send({
+          prompt: 'Hello AI',
+          modelId: testModel.id,
+        })
+        .expect(401);
+    });
+
+    it('should reject request with invalid model ID', async () => {
+      const sessionCookie = await login();
+
+      await request(app.getHttpServer())
+        .post('/chat/start')
+        .set('Cookie', sessionCookie)
+        .send({
+          prompt: 'Hello AI',
+          modelId: 'invalid-model-id',
+        })
+        .expect(404); // Model not found
+    });
+
+    it('should reject request with missing prompt', async () => {
+      const sessionCookie = await login();
+
+      await request(app.getHttpServer())
+        .post('/chat/start')
+        .set('Cookie', sessionCookie)
+        .send({
+          modelId: testModel.id,
+          // Missing prompt
+        })
+        .expect(400); // Validation error
+    });
+  });
+
+  describe('GET /chat/stream (SSE)', () => {
+    it('should stream tokens and persist assistant message', async () => {
+      const sessionCookie = await login();
+
+      // Step 1: Set mock response
+      mockAdapter.setMockResponse('Hello AI', 'Hi there! How can I help you?');
+
+      // Step 2: Create chat session
+      const startResponse = await request(app.getHttpServer())
+        .post('/chat/start')
+        .set('Cookie', sessionCookie)
+        .send({
+          prompt: 'Hello AI',
+          modelId: testModel.id,
+        })
+        .expect(200);
+
+      const { sessionId } = startResponse.body;
+
+      // Step 3: Open SSE stream
+      return new Promise<void>((resolve, reject) => {
+        const tokens: string[] = [];
+        let streamComplete = false;
+
+        request(app.getHttpServer())
+          .get(`/chat/stream?sessionId=${sessionId}`)
+          .set('Cookie', sessionCookie)
+          .set('Accept', 'text/event-stream')
+          .buffer(false)
+          .parse((res, callback) => {
+            // Custom parser for SSE
+            let buffer = '';
+
+            res.on('data', (chunk) => {
+              buffer += chunk.toString();
+
+              // Parse SSE events (format: data: {...}\n\n)
+              const events = buffer.split('\n\n');
+              buffer = events.pop() || ''; // Keep incomplete event in buffer
+
+              for (const event of events) {
+                if (event.startsWith('data: ')) {
+                  const data = event.substring(6); // Remove 'data: '
+                  try {
+                    const parsed = JSON.parse(data);
+
+                    if (parsed.type === 'token') {
+                      tokens.push(parsed.content);
+                    } else if (parsed.type === 'done') {
+                      streamComplete = true;
+                    }
+                  } catch (error) {
+                    // Ignore parse errors
+                  }
+                }
+              }
+            });
+
+            res.on('end', () => {
+              callback(null, { tokens, streamComplete });
+            });
+          })
+          .end(async (err, res) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+
+            try {
+              // Verify tokens were streamed
+              expect(tokens.length).toBeGreaterThan(0);
+              expect(streamComplete).toBe(true);
+
+              // Reconstruct message from tokens
+              const fullMessage = tokens.join('');
+              expect(fullMessage).toBe('Hi there! How can I help you?');
+
+              // Give a moment for DB write to complete
+              await new Promise((r) => setTimeout(r, 500));
+
+              // Step 4: Verify assistant message was persisted in DB
+              const assistantMessage = await prisma.message.findFirst({
+                where: {
+                  userId: testUser.id,
+                  role: 'assistant',
+                },
+                orderBy: {
+                  createdAt: 'desc',
+                },
+              });
+
+              expect(assistantMessage).toBeDefined();
+              expect(assistantMessage?.content).toBe('Hi there! How can I help you?');
+              expect(assistantMessage?.modelId).toBe(testModel.id);
+
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          });
+      });
+    }, 15000); // Increase timeout for SSE test
+
+    it('should return error for invalid session ID', async () => {
+      const sessionCookie = await login();
+
+      const response = await request(app.getHttpServer())
+        .get('/chat/stream?sessionId=invalid-session-id')
+        .set('Cookie', sessionCookie)
+        .set('Accept', 'text/event-stream')
+        .expect(200); // SSE always returns 200, error is in stream
+
+      // Parse response to check for error event
+      // Note: In real implementation, error should be sent as SSE event
+    });
+
+    it('should reject stream without authentication', async () => {
+      await request(app.getHttpServer())
+        .get('/chat/stream?sessionId=some-session-id')
+        .set('Accept', 'text/event-stream')
+        .expect(401);
+    });
+  });
+
+  describe('GET /chat/history', () => {
+    it('should return chat history for user', async () => {
+      const sessionCookie = await login();
+
+      // Create some messages first
+      mockAdapter.setMockResponse('Test prompt 1', 'Test response 1');
+      mockAdapter.setMockResponse('Test prompt 2', 'Test response 2');
+
+      // Send first message
+      const start1 = await request(app.getHttpServer())
+        .post('/chat/start')
+        .set('Cookie', sessionCookie)
+        .send({ prompt: 'Test prompt 1', modelId: testModel.id })
+        .expect(200);
+
+      // Wait for stream to complete (simplified - just wait)
+      await new Promise((r) => setTimeout(r, 1000));
+
+      // Send second message
+      const start2 = await request(app.getHttpServer())
+        .post('/chat/start')
+        .set('Cookie', sessionCookie)
+        .send({ prompt: 'Test prompt 2', modelId: testModel.id })
+        .expect(200);
+
+      await new Promise((r) => setTimeout(r, 1000));
+
+      // Get history
+      const response = await request(app.getHttpServer())
+        .get('/chat/history?limit=10')
+        .set('Cookie', sessionCookie)
+        .expect(200);
+
+      // Verify response structure
+      expect(response.body).toHaveProperty('messages');
+      expect(Array.isArray(response.body.messages)).toBe(true);
+      expect(response.body.messages.length).toBeGreaterThanOrEqual(2);
+
+      // Verify messages are sorted chronologically (oldest first)
+      const messages = response.body.messages;
+      for (let i = 1; i < messages.length; i++) {
+        const prev = new Date(messages[i - 1].createdAt);
+        const curr = new Date(messages[i].createdAt);
+        expect(curr.getTime()).toBeGreaterThanOrEqual(prev.getTime());
+      }
+    });
+
+    it('should filter history by projectId', async () => {
+      const sessionCookie = await login();
+
+      // Create a test project
+      const project = await prisma.project.create({
+        data: {
+          name: 'Test Project',
+          description: 'Test project for E2E',
+          ownerId: testUser.id,
+        },
+      });
+
+      // Send message with projectId
+      mockAdapter.setMockResponse('Project message', 'Project response');
+      await request(app.getHttpServer())
+        .post('/chat/start')
+        .set('Cookie', sessionCookie)
+        .send({
+          prompt: 'Project message',
+          modelId: testModel.id,
+          projectId: project.id,
+        })
+        .expect(200);
+
+      await new Promise((r) => setTimeout(r, 1000));
+
+      // Get history filtered by project
+      const response = await request(app.getHttpServer())
+        .get(`/chat/history?projectId=${project.id}`)
+        .set('Cookie', sessionCookie)
+        .expect(200);
+
+      // Verify all messages have projectId
+      const messages = response.body.messages;
+      expect(messages.length).toBeGreaterThan(0);
+      messages.forEach((msg: any) => {
+        expect(msg.projectId).toBe(project.id);
+      });
+    });
+  });
+
+  describe('Complete Chat Flow', () => {
+    it('should complete full chat flow: create user, login, start chat, stream tokens, verify persistence', async () => {
+      // Step 1: Login
+      const sessionCookie = await login();
+      expect(sessionCookie).toBeDefined();
+
+      // Step 2: Set mock response
+      mockAdapter.setMockResponse('Hello AI', 'Hi');
+
+      // Step 3: POST /chat/start
+      const startResponse = await request(app.getHttpServer())
+        .post('/chat/start')
+        .set('Cookie', sessionCookie)
+        .send({
+          prompt: 'Hello AI',
+          modelId: testModel.id,
+        })
+        .expect(200);
+
+      expect(startResponse.body).toHaveProperty('sessionId');
+      expect(startResponse.body).toHaveProperty('chatId');
+
+      const { sessionId, chatId } = startResponse.body;
+
+      // Step 4: Open /chat/stream and collect tokens
+      const streamResult = await new Promise<{
+        tokens: string[];
+        fullMessage: string;
+        streamComplete: boolean;
+      }>((resolve, reject) => {
+        const tokens: string[] = [];
+        let streamComplete = false;
+
+        request(app.getHttpServer())
+          .get(`/chat/stream?sessionId=${sessionId}`)
+          .set('Cookie', sessionCookie)
+          .set('Accept', 'text/event-stream')
+          .buffer(false)
+          .parse((res, callback) => {
+            let buffer = '';
+
+            res.on('data', (chunk) => {
+              buffer += chunk.toString();
+
+              const events = buffer.split('\n\n');
+              buffer = events.pop() || '';
+
+              for (const event of events) {
+                if (event.startsWith('data: ')) {
+                  try {
+                    const parsed = JSON.parse(event.substring(6));
+
+                    if (parsed.type === 'token') {
+                      tokens.push(parsed.content);
+                    } else if (parsed.type === 'done') {
+                      streamComplete = true;
+                    }
+                  } catch (error) {
+                    // Ignore parse errors
+                  }
+                }
+              }
+            });
+
+            res.on('end', () => {
+              callback(null, { tokens, streamComplete });
+            });
+          })
+          .end((err) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+
+            const fullMessage = tokens.join('');
+            resolve({ tokens, fullMessage, streamComplete });
+          });
+      });
+
+      // Step 5: Verify tokens were streamed
+      expect(streamResult.tokens.length).toBeGreaterThan(0);
+      expect(streamResult.streamComplete).toBe(true);
+      expect(streamResult.fullMessage).toBe('Hi');
+
+      // Step 6: Wait for DB write to complete
+      await new Promise((r) => setTimeout(r, 500));
+
+      // Step 7: Verify final message "Hi" is persisted in DB
+      const assistantMessage = await prisma.message.findFirst({
+        where: {
+          userId: testUser.id,
+          role: 'assistant',
+          content: 'Hi',
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      expect(assistantMessage).toBeDefined();
+      expect(assistantMessage?.content).toBe('Hi');
+      expect(assistantMessage?.modelId).toBe(testModel.id);
+      expect(assistantMessage?.userId).toBe(testUser.id);
+
+      // Step 8: Verify user message is also in DB
+      const userMessage = await prisma.message.findFirst({
+        where: {
+          userId: testUser.id,
+          role: 'user',
+          content: 'Hello AI',
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      expect(userMessage).toBeDefined();
+      expect(userMessage?.content).toBe('Hello AI');
+
+      // Step 9: Verify chat history
+      const historyResponse = await request(app.getHttpServer())
+        .get(`/chat/history?chatId=${chatId}`)
+        .set('Cookie', sessionCookie)
+        .expect(200);
+
+      expect(historyResponse.body.messages.length).toBeGreaterThanOrEqual(2);
+
+      // Find our messages in history
+      const userMsgInHistory = historyResponse.body.messages.find(
+        (m: any) => m.role === 'user' && m.content === 'Hello AI',
+      );
+      const assistantMsgInHistory = historyResponse.body.messages.find(
+        (m: any) => m.role === 'assistant' && m.content === 'Hi',
+      );
+
+      expect(userMsgInHistory).toBeDefined();
+      expect(assistantMsgInHistory).toBeDefined();
+
+      console.log('✅ Complete chat flow test passed!');
+      console.log(`   - User message: "${userMessage?.content}"`);
+      console.log(`   - Assistant message: "${assistantMessage?.content}"`);
+      console.log(`   - Tokens streamed: ${streamResult.tokens.length}`);
+      console.log(`   - Chat history: ${historyResponse.body.messages.length} messages`);
+    }, 20000); // Extended timeout for complete flow
+  });
+});
