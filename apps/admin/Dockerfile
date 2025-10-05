@@ -24,7 +24,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 FROM deps AS prisma
 WORKDIR /app
 COPY apps/api/prisma ./apps/api/prisma
-RUN cd apps/api && pnpm prisma generate
+RUN cd apps/api && npx prisma generate
 
 # Builder stage
 FROM base AS builder
