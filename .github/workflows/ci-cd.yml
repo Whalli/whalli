@@ -77,8 +77,7 @@ jobs:
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
       
-    - name: Generate Prisma client (API only)
-      if: matrix.app == 'api'
+    - name: Generate Prisma client
       run: cd apps/api && pnpm prisma generate
       
     - name: Build application
