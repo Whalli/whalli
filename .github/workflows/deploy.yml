@@ -1,8 +1,10 @@
 name: Production Deployment
 
 on:
-  push:
-    branches: [ main ]
+  workflow_run:
+    workflows: [ "CI/CD Pipeline" ]
+    types:
+      - completed
   workflow_dispatch:
     inputs:
       environment:
@@ -16,8 +18,9 @@ on:
 
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'production' }}
+    environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
     
     steps:
     - name: Checkout code
