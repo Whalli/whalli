@@ -26,10 +26,9 @@ RUN cd apps/api && pnpm prisma generate
 FROM base AS builder
 WORKDIR /app
 
-# Copy dependencies and prisma
+# Copy dependencies and prisma client
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=prisma /app/apps/api/node_modules/.prisma ./apps/api/node_modules/.prisma
+COPY --from=prisma /app/node_modules/.prisma ./node_modules/.prisma
 
 # Copy source code
 COPY . .
@@ -48,9 +47,9 @@ RUN adduser --system --uid 1001 nestjs
 
 # Copy built application
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/api/package.json ./apps/api/
+COPY --from=builder /app/package.json ./
 
 USER nestjs
 
