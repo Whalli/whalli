@@ -30,13 +30,16 @@ RUN cd apps/api && pnpm prisma generate
 FROM base AS builder
 WORKDIR /app
 
-# Copy ALL from prisma stage (includes deps + prisma client)
-COPY --from=prisma /app ./
+# Copy ALL from deps stage (node_modules + workspace structure)
+COPY --from=deps /app ./
 
 # Copy workspace configuration and source code
 COPY turbo.json ./
 COPY packages ./packages
 COPY apps/api ./apps/api
+
+# Copy Prisma Client from prisma stage (after sources to avoid overwrite)
+COPY --from=prisma /app/node_modules/.prisma ./node_modules/.prisma
 
 # Build the app (Turborepo will build dependencies first)
 RUN pnpm build --filter=@whalli/api
