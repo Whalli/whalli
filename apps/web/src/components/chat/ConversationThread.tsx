@@ -10,7 +10,7 @@ import {
   Archive,
   FolderOpen,
   Lock,
-  Unlock
+  Unlock as _Unlock
 } from 'lucide-react';
 import Link from 'next/link';
 

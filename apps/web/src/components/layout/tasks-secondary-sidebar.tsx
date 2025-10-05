@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Filter, CheckSquare, Circle, Clock, AlertCircle } from 'lucide-react';
+import { Plus, Filter, CheckSquare, Circle, Clock, AlertCircle as _AlertCircle } from 'lucide-react';
 
 interface TasksSecondarySidebarProps {
   filters?: {
@@ -16,8 +16,8 @@ interface TasksSecondarySidebarProps {
 }
 
 export function TasksSecondarySidebar({ 
-  filters,
-  onFilterChange,
+  filters: _filters,
+  onFilterChange: _onFilterChange,
   stats = { todo: 0, inProgress: 0, completed: 0 }
 }: TasksSecondarySidebarProps) {
   return (

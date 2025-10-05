@@ -1,6 +1,6 @@
 module.exports = {
   root: true,
-  extends: ["@whalli/config/eslint-library"],
+  extends: ["../config/eslint-library.js"],
   rules: {
     "react/react-in-jsx-scope": "off",
   },

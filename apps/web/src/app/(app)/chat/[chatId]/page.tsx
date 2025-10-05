@@ -1,11 +1,9 @@
 "use client";
 
 import { ChatUI } from '@/components/chat';
-import { useParams } from 'next/navigation';
 
-export default function ChatConversationPage() {
-  const params = useParams();
-  const chatId = params.chatId as string;
+export default function ChatPage({ params }: { params: { chatId: string } }) {
+  const _chatId = params.chatId as string;
   
   // In a real app, get userId from auth context
   const userId = 'demo-user-id';

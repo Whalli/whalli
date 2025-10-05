@@ -12,7 +12,7 @@ import {
   Badge,
   Card,
   CardContent,
-  CardDescription,
+  CardDescription as _CardDescription,
   CardHeader,
   CardTitle,
 } from "@whalli/ui";

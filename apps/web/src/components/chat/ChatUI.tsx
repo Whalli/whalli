@@ -32,7 +32,7 @@ export function ChatUI({
   initialPinnedModelId,
   onModelPin
 }: ChatUIProps) {
-  const { models, selectedModel, setSelectedModel, isLoading: modelsLoading } = useChatModels(apiUrl);
+  const { models, selectedModel, setSelectedModel, isLoading: _modelsLoading } = useChatModels(apiUrl);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [pinnedModelId, setPinnedModelId] = useState<string | null>(initialPinnedModelId || null);
 
@@ -46,7 +46,7 @@ export function ChatUI({
     messages, 
     sendMessage, 
     stopStreaming,
-    clearMessages,
+    clearMessages: _clearMessages,
     isStreaming, 
     isLoading: chatLoading,
     error: chatError 

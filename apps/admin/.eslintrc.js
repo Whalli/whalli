@@ -1,4 +1,4 @@
 module.exports = {
   root: true,
-  extends: ["@whalli/config/eslint-nextjs"],
+  extends: ["../../packages/config/eslint-nextjs.js"],
 };

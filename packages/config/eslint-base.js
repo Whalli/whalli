@@ -2,8 +2,8 @@
 module.exports = {
   extends: [
     "eslint:recommended",
-    "@typescript-eslint/recommended",
-    "eslint-config-prettier",
+    "plugin:@typescript-eslint/recommended",
+    "prettier",
   ],
   parser: "@typescript-eslint/parser",
   plugins: ["@typescript-eslint"],
@@ -24,7 +24,7 @@ module.exports = {
         caughtErrorsIgnorePattern: "^_",
       },
     ],
-    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-explicit-any": "off",
   },
   ignorePatterns: [
     "dist/",

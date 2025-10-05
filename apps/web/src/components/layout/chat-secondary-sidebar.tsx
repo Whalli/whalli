@@ -59,7 +59,7 @@ export function ChatSecondarySidebar({
     return acc;
   }, {} as Record<string, { projectId: string; projectName: string; threads: ThreadType[] }>);
 
-  const standaloneThreads = recentThreads.filter(t => !t.projectId);
+  const _standaloneThreads = recentThreads.filter(t => !t.projectId);
   const projectGroups = Object.values(threadsByProject);
 
   return (

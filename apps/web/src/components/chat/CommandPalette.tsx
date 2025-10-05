@@ -9,8 +9,8 @@ import {
   Globe,
   X,
   Sparkles,
-  FileText,
-  Users
+  FileText as _FileText,
+  Users as _Users
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
