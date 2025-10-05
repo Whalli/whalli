@@ -12,7 +12,9 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml .npmrc* ./
 COPY pnpm-workspace.yaml ./
 COPY apps/admin/package.json ./apps/admin/
-COPY packages/*/package.json ./packages/*/
+COPY packages/ui/package.json ./packages/ui/
+COPY packages/config/package.json ./packages/config/
+COPY packages/types/package.json ./packages/types/
 
 # Install dependencies with cache mount
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
