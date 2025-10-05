@@ -196,6 +196,9 @@ importers:
       winston:
         specifier: ^3.18.3
         version: 3.18.3
+      zod:
+        specifier: ^3.22.4
+        version: 3.25.76
     devDependencies:
       '@nestjs/cli':
         specifier: ^10.3.2

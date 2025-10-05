@@ -2,7 +2,8 @@
 FROM node:18-alpine AS base
 
 # Install pnpm
-RUN npm install -g pnpm@8
+RUN apk add --no-cache openssl \
+    && npm install -g pnpm@8
 
 # Dependencies stage
 FROM base AS deps
@@ -48,7 +49,7 @@ RUN pnpm build --filter=@whalli/api
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 RUN addgroup --system --gid 1001 nestjs
 RUN adduser --system --uid 1001 nestjs
