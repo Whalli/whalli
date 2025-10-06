@@ -63,8 +63,17 @@ jobs:
           set -e
           
           echo "📦 Pulling latest code..."
-          cd /opt/whalli
+          REPO_DIR="/opt/whalli"
+
+          if [ ! -d "$REPO_DIR/.git" ]; then
+            echo "📁 Repository missing, cloning fresh copy..."
+            rm -rf "$REPO_DIR"
+            git clone --depth 1 "git@github.com:${{ github.repository }}.git" "$REPO_DIR"
+          fi
+
+          cd "$REPO_DIR"
           git fetch origin
+          git checkout main
           git reset --hard origin/main
           
           echo "🔧 Creating .env file..."
@@ -142,12 +151,12 @@ jobs:
     - name: Notify on success
       if: success()
       run: |
-        echo "✅ Deployment to ${{ github.event.inputs.environment || 'production' }} successful!"
+        echo "✅ Deployment to ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }} successful!"
         
     - name: Notify on failure
       if: failure()
       run: |
-        echo "❌ Deployment to ${{ github.event.inputs.environment || 'production' }} failed!"
+        echo "❌ Deployment to ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }} failed!"
         
     - name: Rollback on failure
       if: failure()
@@ -159,7 +168,13 @@ jobs:
           set -e
           
           echo "🔄 Rolling back deployment..."
-          cd /opt/whalli
+          REPO_DIR="/opt/whalli"
+          if [ ! -d "$REPO_DIR/.git" ]; then
+            echo "⚠️ Repository directory missing; cannot rollback."
+            exit 1
+          fi
+
+          cd "$REPO_DIR"
           git reset --hard HEAD~1
           docker-compose -f docker-compose.prod.yml up -d
           
