@@ -80,6 +80,22 @@ jobs:
           git fetch origin
           git checkout main
           git reset --hard origin/main
+
+          if command -v docker >/dev/null 2>&1; then
+            if docker compose version >/dev/null 2>&1; then
+              COMPOSE_CMD="docker compose"
+            elif command -v docker-compose >/dev/null 2>&1; then
+              COMPOSE_CMD="docker-compose"
+            else
+              echo "🔧 Installing Docker Compose..."
+              sudo apt-get update -y
+              sudo apt-get install -y docker-compose
+              COMPOSE_CMD="docker-compose"
+            fi
+          else
+            echo "❌ Docker is not installed on the server."
+            exit 1
+          fi
           
           echo "🔧 Creating .env file..."
           cat > .env << EOF
@@ -128,19 +144,19 @@ jobs:
         EOF
           
           echo "🏗️ Building Docker images..."
-          docker-compose -f docker-compose.prod.yml build --no-cache
+          $COMPOSE_CMD -f docker-compose.prod.yml build --no-cache
           
           echo "🚀 Starting services..."
-          docker-compose -f docker-compose.prod.yml up -d
+          $COMPOSE_CMD -f docker-compose.prod.yml up -d
           
           echo "⏳ Waiting for services to be ready..."
           sleep 30
           
           echo "🗄️ Running Prisma migrations..."
-          docker-compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
+          $COMPOSE_CMD -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
           
           echo "✅ Verifying deployment..."
-          docker-compose -f docker-compose.prod.yml ps
+          $COMPOSE_CMD -f docker-compose.prod.yml ps
           
           echo "📊 Checking service health..."
           curl -f http://localhost:3001/api/health || echo "⚠️ API health check failed"
@@ -180,8 +196,25 @@ jobs:
           fi
 
           cd "$REPO_DIR"
-          git reset --hard HEAD~1
-          docker-compose -f docker-compose.prod.yml up -d
+          if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+            git reset --hard HEAD~1
+          else
+            echo "⚠️ No previous revision to rollback to."
+            exit 1
+          fi
+
+          if docker compose version >/dev/null 2>&1; then
+            COMPOSE_CMD="docker compose"
+          elif command -v docker-compose >/dev/null 2>&1; then
+            COMPOSE_CMD="docker-compose"
+          else
+            echo "🔧 Installing Docker Compose..."
+            sudo apt-get update -y
+            sudo apt-get install -y docker-compose
+            COMPOSE_CMD="docker-compose"
+          fi
+
+          $COMPOSE_CMD -f docker-compose.prod.yml up -d
           
           echo "✅ Rollback completed"
         ENDSSH
