@@ -65,6 +65,11 @@ jobs:
           echo "📦 Pulling latest code..."
           REPO_DIR="/opt/whalli"
 
+          mkdir -p ~/.ssh
+          if ! ssh-keygen -F github.com >/dev/null 2>&1; then
+            ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+          fi
+
           if [ ! -d "$REPO_DIR/.git" ]; then
             echo "📁 Repository missing, cloning fresh copy..."
             rm -rf "$REPO_DIR"
