@@ -114,7 +114,7 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       MINIO_BUCKET: ${MINIO_BUCKET}
-      MINIO_USE_SSL: false
+      MINIO_USE_SSL: "false"
       # Stripe configuration
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
@@ -190,7 +190,7 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       MINIO_BUCKET: ${MINIO_BUCKET}
-      MINIO_USE_SSL: false
+      MINIO_USE_SSL: "false"
       # AI Provider API Keys
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
@@ -347,8 +347,8 @@ services:
       GF_SERVER_ROOT_URL: https://grafana.${DOMAIN}
       GF_SERVER_DOMAIN: grafana.${DOMAIN}
       GF_INSTALL_PLUGINS: ''
-      GF_AUTH_ANONYMOUS_ENABLED: false
-      GF_USERS_ALLOW_SIGN_UP: false
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
