@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   traefik:
     image: traefik:v3.0
@@ -88,7 +86,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: ./apps/api/Dockerfile
+      dockerfile: apps/api/Dockerfile
     container_name: whalli-api-prod
     restart: unless-stopped
     env_file:
@@ -171,7 +169,7 @@ services:
   workers:
     build:
       context: .
-      dockerfile: ./apps/api/Dockerfile.workers
+      dockerfile: apps/api/Dockerfile.workers
     container_name: whalli-workers-prod
     restart: unless-stopped
     env_file:
@@ -206,7 +204,7 @@ services:
   web:
     build:
       context: .
-      dockerfile: ./apps/web/Dockerfile
+      dockerfile: apps/web/Dockerfile
     container_name: whalli-web-prod
     restart: unless-stopped
     env_file:

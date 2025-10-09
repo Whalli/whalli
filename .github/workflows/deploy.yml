@@ -8,7 +8,8 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Deployment environment'
+              echo "🛑 Stopping existing services..."
+          $COMPOSE_CMD -f docker-compose.prod.yml down --volumes --remove-orphans || true  description: 'Deployment environment'
         required: true
         default: 'production'
         type: choice
@@ -110,10 +111,19 @@ jobs:
         JWT_SECRET=${{ secrets.JWT_SECRET }}
         BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET }}
         
+        # OAuth Providers
+        GITHUB_CLIENT_ID=${{ secrets.GITHUB_CLIENT_ID }}
+        GITHUB_CLIENT_SECRET=${{ secrets.GITHUB_CLIENT_SECRET }}
+        GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+        GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+        
         # Stripe
         STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
         STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}
         NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+        STRIPE_BASIC_PRICE_ID=${{ secrets.STRIPE_BASIC_PRICE_ID }}
+        STRIPE_PRO_PRICE_ID=${{ secrets.STRIPE_PRO_PRICE_ID }}
+        STRIPE_ENTERPRISE_PRICE_ID=${{ secrets.STRIPE_ENTERPRISE_PRICE_ID }}
         
         # AI Providers
         OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
@@ -129,9 +139,22 @@ jobs:
         MINIO_ENDPOINT=http://minio:9000
         MINIO_PUBLIC_ENDPOINT=https://storage.${{ secrets.DOMAIN }}
         
+        # Email (SMTP)
+        SMTP_HOST=${{ secrets.SMTP_HOST }}
+        SMTP_PORT=${{ secrets.SMTP_PORT }}
+        SMTP_SECURE=true
+        SMTP_USER=${{ secrets.SMTP_USER }}
+        SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
+        SMTP_FROM_EMAIL=${{ secrets.SMTP_FROM_EMAIL }}
+        SMTP_FROM_NAME=Whalli
+        
         # Monitoring
         GRAFANA_ADMIN_USER=admin
         GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        
+        # Traefik & Prometheus Auth
+        TRAEFIK_AUTH=${{ secrets.TRAEFIK_AUTH }}
+        PROMETHEUS_AUTH=${{ secrets.PROMETHEUS_AUTH }}
         
         # Domain & SSL
         DOMAIN=${{ secrets.DOMAIN }}
@@ -146,7 +169,10 @@ jobs:
           echo "🏗️ Building Docker images..."
           $COMPOSE_CMD -f docker-compose.prod.yml build --no-cache
           
-          echo "🚀 Starting services..."
+          echo "� Stopping existing services..."
+          $COMPOSE_CMD -f docker-compose.prod.yml down || true
+          
+          echo "�🚀 Starting services..."
           $COMPOSE_CMD -f docker-compose.prod.yml up -d
           
           echo "⏳ Waiting for services to be ready..."
