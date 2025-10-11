@@ -158,9 +158,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       
-      # Prisma & OpenSSL (Alpine compatibility)
-      PRISMA_QUERY_ENGINE_LIBRARY: ${PRISMA_QUERY_ENGINE_LIBRARY:-}
-      PRISMA_QUERY_ENGINE_BINARY: ${PRISMA_QUERY_ENGINE_BINARY:-}
+      # OpenSSL (Alpine compatibility)
       OPENSSL_CONF: /dev/null
       
       # Rate Limiting

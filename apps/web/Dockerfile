@@ -5,9 +5,7 @@ FROM node:18-alpine AS base
 RUN apk add --no-cache openssl openssl-dev \
     && npm install -g pnpm@8
 
-# Set Prisma environment variables to fix OpenSSL warnings
-ENV PRISMA_QUERY_ENGINE_LIBRARY=/usr/lib/libquery_engine.so
-ENV PRISMA_QUERY_ENGINE_BINARY=query-engine
+# Set OpenSSL environment variable to avoid Alpine warnings
 ENV OPENSSL_CONF=/dev/null
 
 # Dependencies stage
