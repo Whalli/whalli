@@ -112,7 +112,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 4001
+      PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       REDIS_HOST: redis
@@ -170,6 +170,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+    ports:
+      - "4001:3000"
     networks:
       - whalli-network
     labels:
@@ -177,7 +179,7 @@ services:
       - traefik.http.routers.api.rule=Host(`api.${DOMAIN}`)
       - traefik.http.routers.api.entrypoints=websecure
       - traefik.http.routers.api.tls.certresolver=letsencrypt
-      - traefik.http.services.api.loadbalancer.server.port=3001
+      - traefik.http.services.api.loadbalancer.server.port=3000
       # CORS middleware
       - traefik.http.middlewares.api-cors.headers.accesscontrolallowmethods=GET,OPTIONS,PUT,POST,DELETE,PATCH
       - traefik.http.middlewares.api-cors.headers.accesscontrolallowheaders=*
@@ -186,7 +188,7 @@ services:
       - traefik.http.middlewares.api-cors.headers.addvaryheader=true
       - traefik.http.routers.api.middlewares=api-cors
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -228,7 +230,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 4000
+      PORT: 3000
       NEXTAUTH_URL: https://web.${DOMAIN}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -237,6 +239,8 @@ services:
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
     depends_on:
       - api
+    ports:
+      - "4000:3000"
     networks:
       - whalli-network
     labels:
@@ -266,7 +270,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 4002
+      PORT: 3000
       NEXTAUTH_URL: https://admin.${DOMAIN}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -275,6 +279,8 @@ services:
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
     depends_on:
       - api
+    ports:
+      - "4002:3000"
     networks:
       - whalli-network
     labels:
@@ -282,7 +288,7 @@ services:
       - traefik.http.routers.admin.rule=Host(`admin.${DOMAIN}`)
       - traefik.http.routers.admin.entrypoints=websecure
       - traefik.http.routers.admin.tls.certresolver=letsencrypt
-      - traefik.http.services.admin.loadbalancer.server.port=3002
+      - traefik.http.services.admin.loadbalancer.server.port=3000
       # Redirect HTTP to HTTPS
       - traefik.http.routers.admin-http.rule=Host(`admin.${DOMAIN}`)
       - traefik.http.routers.admin-http.entrypoints=web
@@ -290,7 +296,7 @@ services:
       - traefik.http.middlewares.admin-redirect.redirectscheme.scheme=https
       - traefik.http.middlewares.admin-redirect.redirectscheme.permanent=true
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3002"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3
