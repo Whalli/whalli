@@ -1,74 +1,80 @@
-# Optimized Dockerfile for Dokploy deployment
-FROM node:18-alpine AS base
+# Multi-stage build for API - Debian version for better Prisma compatibility
+FROM node:18-bookworm-slim AS base
 
-# Install dependencies
-RUN apk add --no-cache openssl curl
-RUN npm install -g pnpm@8
+# Install system dependencies including pnpm
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    curl \
+    && npm install -g pnpm@8 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Dependencies stage
 FROM base AS deps
 WORKDIR /app
 
 # Copy package files
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml .npmrc* ./
+COPY pnpm-workspace.yaml ./
 COPY apps/api/package.json ./apps/api/
-COPY packages/types/package.json ./packages/types/
+COPY packages/ui/package.json ./packages/ui/
 COPY packages/config/package.json ./packages/config/
+COPY packages/types/package.json ./packages/types/
 
-# Install dependencies
+# Install dependencies with cache mount
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --prefer-offline
 
-# Prisma stage
+# Generate Prisma client
 FROM deps AS prisma
 WORKDIR /app
 COPY apps/api/prisma ./apps/api/prisma
-RUN cd apps/api && pnpm prisma generate
+RUN pnpm exec prisma generate --schema=apps/api/prisma/schema.prisma
 
 # Builder stage
 FROM base AS builder
 WORKDIR /app
 
-# Copy everything from deps
+# Copy ALL from deps stage (node_modules + workspace structure)
 COPY --from=deps /app ./
 
-# Copy source code
+# Copy workspace configuration and source code
 COPY turbo.json ./
 COPY packages ./packages
 COPY apps/api ./apps/api
 
-# Copy Prisma client
+# Copy Prisma Client from prisma stage (after sources to avoid overwrite)
 COPY --from=prisma /app/node_modules ./node_modules
 
-# Build the application
+# Build the app (Turborepo will build dependencies first)
 RUN pnpm build --filter=@whalli/api
 
-# Production stage
+# Runner stage
 FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV PORT=3001
 
-# Create non-root user
-RUN addgroup --system --gid 1001 nestjs && \
-    adduser --system --uid 1001 nestjs
+# Create user and group
+RUN groupadd --system --gid 1001 nestjs \
+    && useradd --system --uid 1001 --gid nestjs --shell /bin/bash --create-home nestjs
+
+# Create logs directory with proper permissions
+RUN mkdir -p /app/logs && chown -R nestjs:nestjs /app/logs
 
 # Copy built application
-COPY --from=builder /app/apps/api/dist ./dist
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/api/package.json ./package.json
-COPY --from=builder /app/apps/api/prisma ./prisma
+COPY --from=builder /app/apps/api/package.json ./apps/api/
+COPY --from=builder /app/package.json ./
 
-# Change ownership
+# Set ownership of application files
 RUN chown -R nestjs:nestjs /app
 
 USER nestjs
 
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:3001/api/health || exit 1
+ENV PORT=3000
 
-CMD ["node", "dist/main.js"]
+CMD ["node", "apps/api/dist/main.js"]
