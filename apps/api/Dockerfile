@@ -22,7 +22,7 @@ COPY packages/ui/package.json ./packages/ui/
 COPY packages/config/package.json ./packages/config/
 COPY packages/types/package.json ./packages/types/
 
-# Install dependencies with cache mount
+# Install dependencies with cache mount and force pdfjs-dist resolution
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --prefer-offline
 
