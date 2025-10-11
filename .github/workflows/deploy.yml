@@ -164,15 +164,28 @@ jobs:
         RATE_LIMIT_ENABLED=true
         NODE_ENV=production
         PORT=3001
+        
+        # Better Auth URLs (required to prevent default secret error)
+        BETTER_AUTH_URL=https://app.${{ secrets.DOMAIN }}
+        NEXTAUTH_URL=https://app.${{ secrets.DOMAIN }}
+        
+        # Prisma (fix OpenSSL warnings)
+        PRISMA_QUERY_ENGINE_LIBRARY=/usr/lib/libquery_engine.so
+        PRISMA_QUERY_ENGINE_BINARY=query-engine
+        OPENSSL_CONF=/dev/null
         EOF
           
           echo "🏗️ Building Docker images..."
           $COMPOSE_CMD -f docker-compose.prod.yml build --no-cache
           
-          echo "� Stopping existing services..."
-          $COMPOSE_CMD -f docker-compose.prod.yml down || true
+          echo "🛑 Stopping existing services and cleaning up..."
+          $COMPOSE_CMD -f docker-compose.prod.yml down --volumes --remove-orphans || true
           
-          echo "�🚀 Starting services..."
+          # Force cleanup of any remaining containers using port 80
+          docker ps -q --filter "publish=80" | xargs -r docker stop || true
+          docker ps -aq --filter "publish=80" | xargs -r docker rm || true
+          
+          echo "🚀 Starting services..."
           $COMPOSE_CMD -f docker-compose.prod.yml up -d
           
           echo "⏳ Waiting for services to be ready..."

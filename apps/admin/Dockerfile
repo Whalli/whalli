@@ -1,9 +1,14 @@
 # Multi-stage build for Admin
 FROM node:18-alpine AS base
 
-# Install pnpm
-RUN apk add --no-cache openssl \
+# Install pnpm and OpenSSL 3.x for Prisma compatibility
+RUN apk add --no-cache openssl openssl-dev \
     && npm install -g pnpm@8
+
+# Set Prisma environment variables to fix OpenSSL warnings
+ENV PRISMA_QUERY_ENGINE_LIBRARY=/usr/lib/libquery_engine.so
+ENV PRISMA_QUERY_ENGINE_BINARY=query-engine
+ENV OPENSSL_CONF=/dev/null
 
 # Dependencies stage
 FROM base AS deps
