@@ -33,7 +33,8 @@
   "packageManager": "pnpm@8.15.0",
   "pnpm": {
     "overrides": {
-      "pdfjs-dist": "4.7.76"
+      "pdfjs-dist": "4.7.76",
+      "pdf-parse": "1.1.1"
     }
   }
 }
