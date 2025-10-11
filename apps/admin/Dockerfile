@@ -30,7 +30,9 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 FROM deps AS prisma
 WORKDIR /app
 COPY apps/api/prisma ./apps/api/prisma
-RUN PRISMA_GENERATE_SKIP_AUTOINSTALL=1 /app/node_modules/.bin/prisma generate --schema=apps/api/prisma/schema.prisma
+# Copy the package.json that contains the prisma binary
+COPY apps/api/package.json ./apps/api/
+RUN cd apps/api && npx prisma generate
 
 # Builder stage
 FROM base AS builder
