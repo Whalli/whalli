@@ -1,0 +1,135 @@
+# Dokploy Configuration for Whalli
+# This file defines the deployment configuration for Dokploy
+
+version: "1.0"
+
+project:
+  name: whalli
+  description: "Whalli - AI-powered project management platform"
+  
+services:
+  # API Service (NestJS)
+  api:
+    type: application
+    name: whalli-api
+    dockerfile: apps/api/Dockerfile.dokploy
+    port: 3001
+    env:
+      NODE_ENV: production
+      PORT: 3001
+    build:
+      context: .
+    healthcheck:
+      path: /api/health
+      port: 3001
+    resources:
+      memory: 512Mi
+      cpu: 0.5
+    
+  # Web Application (Next.js)
+  web:
+    type: application
+    name: whalli-web
+    dockerfile: apps/web/Dockerfile.dokploy
+    port: 3000
+    env:
+      NODE_ENV: production
+      PORT: 3000
+    build:
+      context: .
+    depends_on:
+      - api
+    resources:
+      memory: 256Mi
+      cpu: 0.25
+      
+  # Admin Panel (Next.js)
+  admin:
+    type: application
+    name: whalli-admin
+    dockerfile: apps/admin/Dockerfile.dokploy
+    port: 3002
+    env:
+      NODE_ENV: production
+      PORT: 3002
+    build:
+      context: .
+    depends_on:
+      - api
+    resources:
+      memory: 256Mi
+      cpu: 0.25
+      
+  # Workers (Background jobs)
+  workers:
+    type: application
+    name: whalli-workers
+    dockerfile: apps/api/Dockerfile.workers.dokploy
+    env:
+      NODE_ENV: production
+    build:
+      context: .
+    depends_on:
+      - redis
+      - api
+    resources:
+      memory: 256Mi
+      cpu: 0.25
+      
+  # Redis Cache
+  redis:
+    type: database
+    name: whalli-redis
+    image: redis:7-alpine
+    port: 6379
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    resources:
+      memory: 128Mi
+      cpu: 0.1
+      
+  # MinIO S3 Storage
+  minio:
+    type: database
+    name: whalli-minio
+    image: minio/minio:latest
+    port: 9000
+    command: ["server", "/data", "--console-address", ":9001"]
+    env:
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD}"
+    volumes:
+      - minio_data:/data
+    resources:
+      memory: 256Mi
+      cpu: 0.25
+
+domains:
+  - service: web
+    domain: "${DOMAIN}"
+    ssl: true
+  - service: api
+    domain: "api.${DOMAIN}"
+    ssl: true
+  - service: admin
+    domain: "admin.${DOMAIN}"
+    ssl: true
+  - service: minio
+    domain: "storage.${DOMAIN}"
+    ssl: true
+    port: 9000
+  - service: minio
+    domain: "minio.${DOMAIN}"
+    ssl: true
+    port: 9001
+
+volumes:
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+
+networks:
+  whalli_network:
+    driver: bridge

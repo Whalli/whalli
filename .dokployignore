@@ -1,0 +1,7 @@
+# Ignore Dokploy specific files
+.env.dokploy
+*.dokploy.log
+
+# Dokploy build artifacts
+.dokploy/
+dokploy-cache/

@@ -1,0 +1,79 @@
+# Optimized Dockerfile for Next.js Admin App - Dokploy
+FROM node:18-alpine AS base
+
+# Install dependencies
+RUN apk add --no-cache libc6-compat curl
+RUN npm install -g pnpm@8
+
+# Dependencies stage
+FROM base AS deps
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/admin/package.json ./apps/admin/
+COPY packages/types/package.json ./packages/types/
+COPY packages/config/package.json ./packages/config/
+COPY packages/ui/package.json ./packages/ui/
+
+# Install dependencies
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --prefer-offline
+
+# Prisma stage (for Better Auth)
+FROM deps AS prisma
+WORKDIR /app
+COPY apps/admin/prisma ./apps/admin/prisma
+RUN cd apps/admin && pnpm prisma generate
+
+# Builder stage
+FROM base AS builder
+WORKDIR /app
+
+# Copy everything from deps
+COPY --from=deps /app ./
+
+# Copy source code
+COPY turbo.json ./
+COPY packages ./packages
+COPY apps/admin ./apps/admin
+
+# Copy Prisma client
+COPY --from=prisma /app/node_modules ./node_modules
+
+# Set build environment
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+
+# Build the application
+RUN pnpm build --filter=@whalli/admin
+
+# Production stage
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3002
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nextjs && \
+    adduser --system --uid 1001 nextjs
+
+# Copy built application
+COPY --from=builder /app/apps/admin/.next/standalone ./
+COPY --from=builder /app/apps/admin/.next/static ./apps/admin/.next/static
+COPY --from=builder /app/apps/admin/public ./apps/admin/public
+
+# Change ownership
+RUN chown -R nextjs:nextjs /app
+
+USER nextjs
+
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3002 || exit 1
+
+CMD ["node", "apps/admin/server.js"]

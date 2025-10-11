@@ -93,7 +93,7 @@ services:
       - .env
     environment:
       NODE_ENV: production
-      PORT: 3001
+      PORT: 4001
       # Use Neon Postgres (from .env)
       DATABASE_URL: ${DATABASE_URL}
       # Redis configuration
@@ -211,7 +211,7 @@ services:
       - .env
     environment:
       NODE_ENV: production
-      PORT: 3000
+      PORT: 4000
       # Better Auth configuration
       BETTER_AUTH_URL: https://app.${DOMAIN}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
@@ -263,7 +263,7 @@ services:
       - .env
     environment:
       NODE_ENV: production
-      PORT: 3002
+      PORT: 4002
       # Better Auth configuration
       BETTER_AUTH_URL: https://admin.${DOMAIN}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
