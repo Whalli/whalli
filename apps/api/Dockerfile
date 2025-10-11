@@ -1,5 +1,5 @@
 # Multi-stage build for API - Debian version for better Prisma compatibility
-FROM node:18-bookworm-slim AS base
+FROM node:20-bookworm-slim AS base
 
 # Install system dependencies including pnpm
 RUN apt-get update && apt-get install -y \
@@ -54,6 +54,10 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+
+# Node.js crypto compatibility flags
+ENV NODE_OPTIONS="--enable-source-maps"
+ENV UV_THREADPOOL_SIZE=4
 
 # Create user and group
 RUN groupadd --system --gid 1001 nestjs \
