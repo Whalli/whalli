@@ -59,11 +59,17 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nestjs
 RUN adduser --system --uid 1001 nestjs
 
+# Create logs directory with proper permissions
+RUN mkdir -p /app/logs && chown -R nestjs:nestjs /app/logs
+
 # Copy built application
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/api/package.json ./apps/api/
 COPY --from=builder /app/package.json ./
+
+# Set ownership of application files
+RUN chown -R nestjs:nestjs /app
 
 USER nestjs
 
