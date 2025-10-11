@@ -2,11 +2,13 @@
 FROM node:18-alpine AS base
 
 # Install pnpm and OpenSSL 3.x for Prisma compatibility
-RUN apk add --no-cache openssl openssl-dev \
+RUN apk add --no-cache openssl openssl-dev ca-certificates \
     && npm install -g pnpm@8
 
-# Set OpenSSL environment variable to avoid Alpine warnings
+# Set OpenSSL environment variables for Prisma compatibility
 ENV OPENSSL_CONF=/dev/null
+ENV PRISMA_QUERY_ENGINE_LIBRARY=""
+ENV PRISMA_QUERY_ENGINE_BINARY=""
 
 # Dependencies stage
 FROM base AS deps
