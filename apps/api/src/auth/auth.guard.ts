@@ -24,7 +24,11 @@ export class AuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<Request>();
     const token = this.extractTokenFromRequest(request);
 
+    console.log('[AuthGuard] AUTH_API_URL:', this.AUTH_API_URL);
+    console.log('[AuthGuard] Token found:', !!token);
+
     if (!token) {
+      console.log('[AuthGuard] No token found in request');
       throw new UnauthorizedException('No authentication token found');
     }
 
@@ -35,8 +39,10 @@ export class AuthGuard implements CanActivate {
       // Attach user to request for use in controllers
       request['user'] = user;
       
+      console.log('[AuthGuard] Authentication successful for user:', user.id);
       return true;
     } catch (error) {
+      console.log('[AuthGuard] Authentication failed:', error instanceof Error ? error.message : String(error));
       throw new UnauthorizedException('Invalid or expired session');
     }
   }
@@ -71,7 +77,10 @@ export class AuthGuard implements CanActivate {
    */
   private async validateSession(token: string, cookies?: string): Promise<any> {
     try {
-      const response = await fetch(`${this.AUTH_API_URL}/api/auth/session`, {
+      const sessionUrl = `${this.AUTH_API_URL}/api/auth/session`;
+      console.log('[AuthGuard] Validating session at:', sessionUrl);
+
+      const response = await fetch(sessionUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -82,11 +91,16 @@ export class AuthGuard implements CanActivate {
         },
       });
 
+      console.log('[AuthGuard] Session validation response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Session validation failed');
+        const errorText = await response.text();
+        console.log('[AuthGuard] Session validation error:', errorText);
+        throw new Error(`Session validation failed: ${response.status}`);
       }
 
       const sessionData: any = await response.json();
+      console.log('[AuthGuard] Session data received:', !!sessionData.user);
       
       // Better-Auth returns { session, user } structure
       if (!sessionData.user) {
@@ -95,6 +109,7 @@ export class AuthGuard implements CanActivate {
 
       return sessionData.user;
     } catch (error) {
+      console.log('[AuthGuard] Session validation exception:', error instanceof Error ? error.message : String(error));
       throw new UnauthorizedException('Failed to validate session');
     }
   }

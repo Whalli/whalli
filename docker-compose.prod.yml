@@ -106,6 +106,8 @@ services:
       # Frontend URLs
       FRONTEND_URL: https://app.${DOMAIN}
       ADMIN_URL: https://admin.${DOMAIN}
+      # Better-Auth integration (internal service communication)
+      AUTH_API_URL: http://web:4000
       # MinIO configuration
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000

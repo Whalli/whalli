@@ -66,6 +66,9 @@ services:
       FRONTEND_URL: https://web.${DOMAIN}
       ADMIN_URL: https://admin.${DOMAIN}
       
+      # Better-Auth integration
+      AUTH_API_URL: http://web:3000
+      
       # MinIO Configuration
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
