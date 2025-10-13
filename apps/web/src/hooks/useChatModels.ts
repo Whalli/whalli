@@ -18,7 +18,7 @@ export function useChatModels(apiUrl: string) {
         setIsLoading(true);
         
         // Fetch models from API
-        const response = await fetch(`${apiUrl}/api/model-catalog/models`, {
+        const response = await fetch(`${apiUrl}/api/model-catalog/available`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -33,10 +33,12 @@ export function useChatModels(apiUrl: string) {
         const data = await response.json();
         
         // Transform API response to AIModel format
-        const fetchedModels: AIModel[] = (data.models || []).map((model: any) => ({
+        // API returns { userPlan, totalModels, models } structure
+        const modelsArray = data.models || [];
+        const fetchedModels: AIModel[] = modelsArray.map((model: any) => ({
           id: model.id || model.modelId,
           name: model.name || model.displayName,
-          company: model.provider || model.company,
+          company: model.company?.name || model.provider || model.company,
           description: model.description,
         }));
 

@@ -25,6 +25,18 @@ export class ModelCatalogController {
   // ============================================
 
   /**
+   * GET /api/model-catalog/models
+   * Get all models available for the current user (alias for /available)
+   * This endpoint is used by the frontend chat interface
+   */
+  @Get('models')
+  @UseGuards(AuthGuard)
+  async getModels(@Request() req) {
+    const userId = req.user.id;
+    return this.modelCatalogService.getAvailableModels(userId);
+  }
+
+  /**
    * GET /api/model-catalog/available
    * Get all models available for the current user based on their subscription tier
    */
