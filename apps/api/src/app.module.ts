@@ -30,19 +30,19 @@ import { winstonConfig } from './common/logger/logger.config';
     ScheduleModule.forRoot(),
     WinstonModule.forRoot(winstonConfig),
     MetricsModule,
-    NotificationsModule,
-    ModelCatalogModule,
+    // NotificationsModule, // DISABLED - potential blocking issue
+    // ModelCatalogModule,  // DISABLED - potential blocking issue
     PrismaModule,
-    AuthModule,
-    UsersModule,
-    ProjectsModule,
-    TasksModule,
-    ChatModule,
-    FilesModule,
-    BillingModule,
-    VoiceModule,
-    MindmapModule,
-    RecurringSearchModule,
+    AuthModule,             // RE-ENABLED - Fixed lazy initialization
+    // UsersModule,         // DISABLED - potential blocking issue
+    // ProjectsModule,      // DISABLED - potential blocking issue
+    // TasksModule,         // DISABLED - potential blocking issue
+    // ChatModule,          // DISABLED - potential blocking issue
+    // FilesModule,         // DISABLED - potential blocking issue
+    // BillingModule,       // DISABLED - potential blocking issue
+    // VoiceModule,         // DISABLED - potential blocking issue
+    // MindmapModule,       // DISABLED - potential blocking issue
+    // RecurringSearchModule, // DISABLED - potential blocking issue
   ],
   controllers: [HealthController],
   providers: [

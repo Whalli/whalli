@@ -11,7 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { MindmapService } from './mindmap.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   CreateMindmapDto,
   CreateMindmapNodeDto,
@@ -24,7 +24,7 @@ import {
 } from './dto/update-mindmap.dto';
 
 @Controller('mindmaps')
-@UseGuards(AuthGuard)
+@UseGuards(JwtAuthGuard)
 export class MindmapController {
   constructor(private readonly mindmapService: MindmapService) {}
 

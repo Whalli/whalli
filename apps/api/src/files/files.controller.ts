@@ -10,7 +10,8 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { AuthGuard, CurrentUser } from '../auth/auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { FilesService } from './files.service';
 
 /**
@@ -18,7 +19,7 @@ import { FilesService } from './files.service';
  * Protected by AuthGuard
  */
 @Controller('api/files')
-@UseGuards(AuthGuard)
+@UseGuards(JwtAuthGuard)
 export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 

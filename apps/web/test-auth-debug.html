@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Debug</title>
+</head>
+<body>
+    <h1>Authentication Debug</h1>
+    <div id="status"></div>
+    <div id="tokens"></div>
+    <button onclick="testSignup()">Test Signup</button>
+    <button onclick="testSignin()">Test Signin</button>
+    <button onclick="testProfile()">Test Profile</button>
+    <button onclick="clearStorage()">Clear Storage</button>
+
+    <script>
+        const API_URL = 'http://localhost:3001/api';
+
+        function updateStatus(msg, isError = false) {
+            document.getElementById('status').innerHTML = `<p style="color: ${isError ? 'red' : 'green'}">${msg}</p>`;
+            console.log(msg);
+        }
+
+        function showTokens() {
+            const authToken = localStorage.getItem('auth_token');
+            const refreshToken = localStorage.getItem('refresh_token');
+            document.getElementById('tokens').innerHTML = `
+                <p><strong>Auth Token:</strong> ${authToken ? authToken.substring(0, 20) + '...' : 'None'}</p>
+                <p><strong>Refresh Token:</strong> ${refreshToken ? refreshToken.substring(0, 20) + '...' : 'None'}</p>
+            `;
+        }
+
+        async function testSignup() {
+            try {
+                const email = `test${Date.now()}@test.com`;
+                const response = await fetch(`${API_URL}/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password: 'Test1234!', name: 'Test User' })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('auth_token', data.accessToken);
+                    localStorage.setItem('refresh_token', data.refreshToken);
+                    updateStatus(`✅ Signup successful: ${email}`);
+                    showTokens();
+                } else {
+                    updateStatus(`❌ Signup failed: ${data.message}`, true);
+                }
+            } catch (error) {
+                updateStatus(`❌ Error: ${error.message}`, true);
+            }
+        }
+
+        async function testSignin() {
+            try {
+                const response = await fetch(`${API_URL}/auth/signin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: 'test@test.com', password: 'Test1234!' })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('auth_token', data.accessToken);
+                    localStorage.setItem('refresh_token', data.refreshToken);
+                    updateStatus(`✅ Signin successful`);
+                    showTokens();
+                } else {
+                    updateStatus(`❌ Signin failed: ${data.message}`, true);
+                }
+            } catch (error) {
+                updateStatus(`❌ Error: ${error.message}`, true);
+            }
+        }
+
+        async function testProfile() {
+            try {
+                const token = localStorage.getItem('auth_token');
+                if (!token) {
+                    updateStatus('❌ No token found', true);
+                    return;
+                }
+
+                const response = await fetch(`${API_URL}/auth/profile`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateStatus(`✅ Profile: ${data.user.email} (${data.user.name})`);
+                } else {
+                    updateStatus(`❌ Profile fetch failed: ${data.message}`, true);
+                }
+            } catch (error) {
+                updateStatus(`❌ Error: ${error.message}`, true);
+            }
+        }
+
+        function clearStorage() {
+            localStorage.clear();
+            updateStatus('✅ Storage cleared');
+            showTokens();
+        }
+
+        // Initial display
+        showTokens();
+    </script>
+</body>
+</html>

@@ -14,7 +14,8 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { AuthGuard, CurrentUser } from '../auth/auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { StartChatDto } from './dto/start-chat.dto';
@@ -24,7 +25,7 @@ import { StartChatDto } from './dto/start-chat.dto';
  * All routes are protected by AuthGuard
  */
 @Controller('chat')
-@UseGuards(AuthGuard)
+@UseGuards(JwtAuthGuard)
 export class ChatController {
   private readonly logger = new Logger(ChatController.name);
 

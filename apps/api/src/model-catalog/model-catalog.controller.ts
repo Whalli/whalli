@@ -13,7 +13,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ModelCatalogService } from './model-catalog.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateCompanyDto, UpdateCompanyDto, CreateModelDto, UpdateModelDto } from './dto/model-catalog.dto';
 
 @Controller('model-catalog')
@@ -30,7 +30,7 @@ export class ModelCatalogController {
    * This endpoint is used by the frontend chat interface
    */
   @Get('models')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async getModels(@Request() req) {
     const userId = req.user.id;
     return this.modelCatalogService.getAvailableModels(userId);
@@ -41,7 +41,7 @@ export class ModelCatalogController {
    * Get all models available for the current user based on their subscription tier
    */
   @Get('available')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async getAvailableModels(@Request() req) {
     const userId = req.user.id;
     return this.modelCatalogService.getAvailableModels(userId);
@@ -52,7 +52,7 @@ export class ModelCatalogController {
    * Get available models grouped by company
    */
   @Get('available/by-company')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async getAvailableModelsByCompany(@Request() req) {
     const userId = req.user.id;
     return this.modelCatalogService.getAvailableModelsByCompany(userId);
@@ -63,7 +63,7 @@ export class ModelCatalogController {
    * Check if current user can access a specific model
    */
   @Get('models/:id/can-access')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async canAccessModel(@Request() req, @Param('id') modelId: string) {
     const userId = req.user.id;
     const canAccess = await this.modelCatalogService.canAccessModel(userId, modelId);
@@ -79,7 +79,7 @@ export class ModelCatalogController {
    * Get all companies (admin only)
    */
   @Get('admin/companies')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async getAllCompanies(@Query('includeInactive') includeInactive?: string) {
     // TODO: Add admin role check
     return this.modelCatalogService.getAllCompanies(includeInactive === 'true');
@@ -90,7 +90,7 @@ export class ModelCatalogController {
    * Get company by ID (admin only)
    */
   @Get('admin/companies/:id')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async getCompanyById(@Param('id') id: string) {
     // TODO: Add admin role check
     return this.modelCatalogService.getCompanyById(id);
@@ -101,7 +101,7 @@ export class ModelCatalogController {
    * Create a new company (admin only)
    */
   @Post('admin/companies')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
   async createCompany(@Body() data: CreateCompanyDto) {
     // TODO: Add admin role check
@@ -113,7 +113,7 @@ export class ModelCatalogController {
    * Update company (admin only)
    */
   @Put('admin/companies/:id')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async updateCompany(@Param('id') id: string, @Body() data: UpdateCompanyDto) {
     // TODO: Add admin role check
     return this.modelCatalogService.updateCompany(id, data);
@@ -124,7 +124,7 @@ export class ModelCatalogController {
    * Delete company (admin only)
    */
   @Delete('admin/companies/:id')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteCompany(@Param('id') id: string) {
     // TODO: Add admin role check
@@ -140,7 +140,7 @@ export class ModelCatalogController {
    * Get all models (admin only)
    */
   @Get('admin/models')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async getAllModels(@Query('includeInactive') includeInactive?: string) {
     // TODO: Add admin role check
     return this.modelCatalogService.getAllModels(includeInactive === 'true');
@@ -151,7 +151,7 @@ export class ModelCatalogController {
    * Get model by ID (admin only)
    */
   @Get('admin/models/:id')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async getModelById(@Param('id') id: string) {
     // TODO: Add admin role check
     return this.modelCatalogService.getModelById(id);
@@ -162,7 +162,7 @@ export class ModelCatalogController {
    * Create a new model (admin only)
    */
   @Post('admin/models')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
   async createModel(@Body() data: CreateModelDto) {
     // TODO: Add admin role check
@@ -174,7 +174,7 @@ export class ModelCatalogController {
    * Update model (admin only)
    */
   @Put('admin/models/:id')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async updateModel(@Param('id') id: string, @Body() data: UpdateModelDto) {
     // TODO: Add admin role check
     return this.modelCatalogService.updateModel(id, data);
@@ -185,7 +185,7 @@ export class ModelCatalogController {
    * Delete model (admin only)
    */
   @Delete('admin/models/:id')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteModel(@Param('id') id: string) {
     // TODO: Add admin role check
@@ -201,7 +201,7 @@ export class ModelCatalogController {
    * Bulk import models from JSON (admin only)
    */
   @Post('admin/bulk-import')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async bulkImportModels(@Body() data: { companyName: string; models: CreateModelDto[] }[]) {
     // TODO: Add admin role check
     return this.modelCatalogService.bulkImportModels(data);

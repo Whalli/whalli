@@ -4,6 +4,7 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
 import { Button, Input } from "@whalli/ui";
+import { AuthRedirect } from "@/components/auth/auth-redirect";
 import Link from "next/link";
 
 function LoginForm() {
@@ -49,6 +50,7 @@ function LoginForm() {
   };
 
   return (
+    <AuthRedirect redirectIfAuthenticated={true}>
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
         <div className="bg-card border rounded-lg p-8 shadow-lg">
@@ -166,6 +168,7 @@ function LoginForm() {
         </div>
       </div>
     </div>
+    </AuthRedirect>
   );
 }
 

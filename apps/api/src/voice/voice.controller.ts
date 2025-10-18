@@ -12,7 +12,8 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { AuthGuard, CurrentUser } from '../auth/auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { VoiceService } from './voice.service';
 
 /**
@@ -20,7 +21,7 @@ import { VoiceService } from './voice.service';
  * Protected by AuthGuard
  */
 @Controller('api/voice')
-@UseGuards(AuthGuard)
+@UseGuards(JwtAuthGuard)
 export class VoiceController {
   constructor(private readonly voiceService: VoiceService) {}
 

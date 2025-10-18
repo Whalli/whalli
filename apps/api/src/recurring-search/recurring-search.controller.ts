@@ -11,11 +11,11 @@ import {
   Query,
 } from '@nestjs/common';
 import { RecurringSearchService } from './recurring-search.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateRecurringSearchDto, UpdateRecurringSearchDto } from './dto/create-recurring-search.dto';
 
 @Controller('recurring-searches')
-@UseGuards(AuthGuard)
+@UseGuards(JwtAuthGuard)
 export class RecurringSearchController {
   constructor(private readonly recurringSearchService: RecurringSearchService) {}
 

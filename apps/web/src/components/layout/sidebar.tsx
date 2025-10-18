@@ -8,11 +8,11 @@ import {
   CheckSquare, 
   Folder, 
   Menu, 
-  X,
-  User
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WhalliLogo } from '@/components/logo';
+import { UserBadge } from '@/components/auth/user-badge';
 
 interface SidebarProps {
   user?: {
@@ -111,34 +111,13 @@ export function Sidebar({ user }: SidebarProps) {
           })}
         </nav>
 
-        {/* User Avatar */}
+        {/* User Badge */}
         <div className="p-4 border-t border-sidebar-hover">
           <Link
             href="/profile"
-            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-sidebar-hover transition-colors group"
+            className="block rounded-lg hover:bg-sidebar-hover transition-colors p-3"
           >
-            <div className="relative h-10 w-10 flex-shrink-0">
-              {user?.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="h-full w-full rounded-full object-cover border-2 border-sidebar-foreground/20"
-                />
-              ) : (
-                <div className="h-full w-full rounded-full bg-sidebar-active flex items-center justify-center">
-                  <User className="h-5 w-5 text-sidebar-foreground" />
-                </div>
-              )}
-              <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-success border-2 border-sidebar" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">
-                {user?.name || 'User'}
-              </p>
-              <p className="text-xs text-sidebar-foreground/60 truncate">
-                {user?.email || 'user@example.com'}
-              </p>
-            </div>
+            <UserBadge variant="default" showStatus={true} />
           </Link>
         </div>
       </aside>

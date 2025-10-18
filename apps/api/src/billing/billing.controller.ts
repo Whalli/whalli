@@ -15,7 +15,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { BillingService, CreateSubscriptionDto } from './billing.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SubscriptionPlan } from '@prisma/client';
 import { Request } from 'express';
@@ -28,7 +28,7 @@ export class BillingController {
    * Create a subscription for the current user
    */
   @Post('subscriptions')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async createSubscription(
     @CurrentUser() user: any,
     @Body() body: { plan: SubscriptionPlan; trialPeriodDays?: number },
@@ -46,7 +46,7 @@ export class BillingController {
    * Get current user's subscription
    */
   @Get('subscriptions/me')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async getMySubscription(@CurrentUser() user: any) {
     const subscription = await this.billingService.getSubscription(user.id);
     
@@ -67,7 +67,7 @@ export class BillingController {
    * Get subscription by user ID (admin only)
    */
   @Get('subscriptions/:userId')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async getSubscription(@Param('userId') userId: string) {
     return await this.billingService.getSubscription(userId);
   }
@@ -76,7 +76,7 @@ export class BillingController {
    * Update subscription plan
    */
   @Patch('subscriptions/plan')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async updatePlan(
     @CurrentUser() user: any,
     @Body() body: { plan: SubscriptionPlan },
@@ -92,7 +92,7 @@ export class BillingController {
    * Cancel subscription
    */
   @Delete('subscriptions')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async cancelSubscription(@CurrentUser() user: any) {
     return await this.billingService.cancelSubscription(user.id);
   }
@@ -101,7 +101,7 @@ export class BillingController {
    * Create Stripe Checkout Session
    */
   @Post('checkout')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async createCheckoutSession(
     @CurrentUser() user: any,
     @Body() body: {
@@ -131,7 +131,7 @@ export class BillingController {
    * Create Stripe Billing Portal Session
    */
   @Post('portal')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   async createPortalSession(
     @CurrentUser() user: any,
     @Body() body: { returnUrl: string },

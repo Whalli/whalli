@@ -1,33 +1,16 @@
-import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/adapters/prisma";
-import { PrismaClient } from "@prisma/client";
+/**
+ * Auth Server - DEPRECATED
+ * Better Auth is now handled by the API backend.
+ * All authentication is proxied through the API at apps/api/src/auth/auth.controller.ts
+ * 
+ * This file is kept for backwards compatibility and reference.
+ */
 
-const prisma = new PrismaClient();
-
-export const auth = betterAuth({
-  database: prismaAdapter(prisma, {
-    provider: "postgresql",
-  }),
-  
-  baseURL: process.env.NEXTAUTH_URL || "http://localhost:3000",
-  secret: process.env.NEXTAUTH_SECRET!,
-  
-  session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24, // 1 day
-  },
-  
-  emailAndPassword: {
-    enabled: true,
-    requireEmailVerification: false,
-  },
-  
-  socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-    },
-  },
-});
-
-export type Session = typeof auth.$Infer.Session;
+export type Session = {
+  user?: {
+    id: string;
+    email: string;
+    name?: string;
+    image?: string;
+  };
+};

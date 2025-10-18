@@ -74,6 +74,8 @@ export class RateLimitGuard implements CanActivate {
   private readonly defaultUserLimit = 100; // requests per minute
   private readonly defaultIpLimit = 20; // requests per minute
   private readonly defaultWindowSeconds = 60;
+  private lastLogTimestamp = 0; // Throttle logs to once per minute
+  private readonly LOG_THROTTLE_MS = 60000; // 1 minute
 
   constructor(
     private configService: ConfigService,
@@ -99,17 +101,27 @@ export class RateLimitGuard implements CanActivate {
     });
 
     this.redisClient.on('error', (err) => {
-      this.logger.error('Redis connection error:', err);
+      // Throttle error logs to once per minute
+      const now = Date.now();
+      if (now - this.lastLogTimestamp > this.LOG_THROTTLE_MS) {
+        this.logger.error('Redis connection error (will retry)');
+        this.lastLogTimestamp = now;
+      }
     });
 
     this.redisClient.on('connect', () => {
-      this.logger.log('Redis connected for rate limiting');
+      // Throttle connect logs to once per minute
+      const now = Date.now();
+      if (now - this.lastLogTimestamp > this.LOG_THROTTLE_MS) {
+        this.logger.log('Redis connected for rate limiting');
+        this.lastLogTimestamp = now;
+      }
     });
 
     try {
       await this.redisClient.connect();
     } catch (error) {
-      this.logger.error('Failed to connect to Redis:', error);
+      this.logger.error('Failed to connect to Redis (will retry):', error);
     }
   }
 
