@@ -1,0 +1,26 @@
+{
+  "name": "@whalli/prisma",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./client": "./src/client.ts"
+  },
+  "scripts": {
+    "generate": "prisma generate",
+    "db:push": "prisma db push",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "studio": "prisma studio",
+    "db:seed": "tsx seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.9.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.9.0",
+    "typescript": "^5.3.3"
+  }
+}

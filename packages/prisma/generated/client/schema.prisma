@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+// User model - represents application users
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  presets Preset[]
+  chats   Chat[]
+
+  @@map("users")
+}
+
+// Preset model - AI conversation presets/templates
+model Preset {
+  id                String   @id @default(cuid())
+  name              String
+  color             String   @default("#3B82F6") // Hex color for UI
+  systemInstruction String   @db.Text // System prompt/instruction
+  userId            String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chats Chat[]
+
+  @@index([userId])
+  @@map("presets")
+}
+
+// Chat model - represents a conversation
+model Chat {
+  id        String   @id @default(cuid())
+  title     String
+  model     String   @default("gpt-4") // AI model identifier
+  presetId  String? // Optional preset reference
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  preset   Preset?   @relation(fields: [presetId], references: [id], onDelete: SetNull)
+  messages Message[]
+
+  @@index([userId])
+  @@index([presetId])
+  @@map("chats")
+}
+
+// Message model - individual messages in a chat
+model Message {
+  id        String      @id @default(cuid())
+  role      MessageRole
+  content   String      @db.Text
+  chatId    String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  // Relations
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId])
+  @@map("messages")
+}
