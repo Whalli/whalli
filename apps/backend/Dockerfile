@@ -25,16 +25,12 @@ RUN pnpm --filter @whalli/prisma generate
 FROM base AS development
 WORKDIR /app
 ENV NODE_ENV=development
-# Install NestJS CLI globally for development
-RUN npm install -g @nestjs/cli
 EXPOSE 3000
 CMD ["pnpm", "--filter", "@whalli/backend", "dev"]
 
 # Build stage
 FROM base AS builder
 WORKDIR /app
-# Install NestJS CLI globally for build
-RUN npm install -g @nestjs/cli
 RUN pnpm --filter @whalli/backend build
 
 # Production stage
