@@ -24,6 +24,7 @@ RUN pnpm --filter @whalli/prisma generate
 # Development stage
 FROM base AS development
 WORKDIR /app
+ENV NODE_ENV=development
 EXPOSE 3000
 CMD ["pnpm", "--filter", "@whalli/backend", "dev"]
 

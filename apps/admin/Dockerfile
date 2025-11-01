@@ -21,6 +21,7 @@ RUN pnpm install --frozen-lockfile
 # Development stage
 FROM base AS development
 WORKDIR /app
+ENV NODE_ENV=development
 EXPOSE 3000
 CMD ["pnpm", "--filter", "@whalli/admin", "dev"]
 
