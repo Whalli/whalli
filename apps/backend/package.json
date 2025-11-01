@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "bun build src/main.ts --outdir dist --target node",
+    "build": "tsc -p tsconfig.json",
     "dev": "bun --watch src/main.ts",
     "start": "node dist/main.js",
     "start:dev": "bun src/main.ts",
