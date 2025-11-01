@@ -1,7 +1,7 @@
-FROM node:20-slim AS base
+FROM node:20-alpine AS base
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm and bash
+RUN apk add --no-cache bash && npm install -g pnpm
 
 # Set working directory
 WORKDIR /app
@@ -34,8 +34,8 @@ WORKDIR /app
 RUN pnpm --filter @whalli/backend build
 
 # Production stage
-FROM node:20-slim AS production
-RUN npm install -g pnpm
+FROM node:20-alpine AS production
+RUN apk add --no-cache bash && npm install -g pnpm
 WORKDIR /app
 
 # Copy package files
