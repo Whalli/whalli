@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 
 # Install pnpm
 RUN npm install -g pnpm
@@ -34,7 +34,7 @@ WORKDIR /app
 RUN pnpm --filter @whalli/backend build
 
 # Production stage
-FROM node:20-alpine AS production
+FROM node:20-slim AS production
 RUN npm install -g pnpm
 WORKDIR /app
 
