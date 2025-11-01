@@ -1,13 +1,10 @@
-FROM node:20-alpine AS base
-
-# Install pnpm and bash
-RUN apk add --no-cache bash && npm install -g pnpm
+FROM oven/bun:1-alpine AS base
 
 # Set working directory
 WORKDIR /app
 
 # Copy workspace files
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json bun.lockb* ./
 COPY turbo.json ./
 COPY tsconfig.json ./
 
@@ -15,31 +12,32 @@ COPY tsconfig.json ./
 COPY packages ./packages
 COPY apps/backend ./apps/backend
 
-# Install dependencies (updated for @nestjs/cli)
-RUN pnpm install --frozen-lockfile
+# Install dependencies
+RUN bun install --frozen-lockfile
 
 # Generate Prisma Client
-RUN pnpm --filter @whalli/prisma generate
+WORKDIR /app/packages/prisma
+RUN bun run generate
+WORKDIR /app
 
 # Development stage
 FROM base AS development
-WORKDIR /app
+WORKDIR /app/apps/backend
 ENV NODE_ENV=development
 EXPOSE 3000
-CMD ["pnpm", "--filter", "@whalli/backend", "dev"]
+CMD ["bun", "run", "dev"]
 
 # Build stage
 FROM base AS builder
-WORKDIR /app
-RUN pnpm --filter @whalli/backend build
+WORKDIR /app/apps/backend
+RUN bun run build
 
 # Production stage
-FROM node:20-alpine AS production
-RUN apk add --no-cache bash && npm install -g pnpm
+FROM oven/bun:1-alpine AS production
 WORKDIR /app
 
 # Copy package files
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json bun.lockb* ./
 COPY turbo.json ./
 
 # Copy built backend
@@ -48,10 +46,12 @@ COPY --from=builder /app/apps/backend/package.json ./apps/backend/
 COPY --from=builder /app/packages ./packages
 
 # Install production dependencies only
-RUN pnpm install --prod --frozen-lockfile
+RUN bun install --production --frozen-lockfile
 
 # Generate Prisma Client
-RUN pnpm --filter @whalli/prisma generate
+WORKDIR /app/packages/prisma
+RUN bun run generate
 
+WORKDIR /app/apps/backend
 EXPOSE 3000
-CMD ["node", "apps/backend/dist/main.js"]
+CMD ["node", "dist/main.js"]
