@@ -44,8 +44,10 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY --from=builder /app/apps/admin/next.config.js ./apps/admin/
 COPY --from=builder /app/apps/admin/package.json ./apps/admin/
 COPY --from=builder /app/apps/admin/.next ./apps/admin/.next
-COPY --from=builder /app/apps/admin/public ./apps/admin/public
 COPY --from=builder /app/packages ./packages
+
+# Copy public folder if it exists (optional)
+RUN mkdir -p ./apps/admin/public
 
 # Install production dependencies only
 RUN pnpm install --prod --frozen-lockfile

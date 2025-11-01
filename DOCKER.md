@@ -208,10 +208,8 @@ Services marked as "healthy" are ready to accept connections.
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `NODE_ENV` | Environment (development/production) | development |
-| `POSTGRES_USER` | PostgreSQL username | whalli |
-| `POSTGRES_PASSWORD` | PostgreSQL password | whalli_dev_password |
-| `POSTGRES_DB` | Database name | whalli |
-| `POSTGRES_PORT` | PostgreSQL port | 5432 |
+| `DATABASE_URL` | PostgreSQL connection string | postgresql://whalli:whalli_dev_password@postgres:5432/whalli?schema=public |
+| `POSTGRES_PORT` | PostgreSQL port (host) | 5432 |
 | `REDIS_PORT` | Redis port | 6379 |
 | `BACKEND_PORT` | Backend API external port | 4000 |
 | `WEB_PORT` | Frontend external port | 4001 |
