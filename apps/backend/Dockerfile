@@ -1,7 +1,7 @@
 FROM node:20-alpine AS base
 
-# Install pnpm and NestJS CLI for workspace support
-RUN npm install -g pnpm @nestjs/cli
+# Install pnpm
+RUN npm install -g pnpm
 
 # Set working directory
 WORKDIR /app
@@ -35,7 +35,7 @@ RUN pnpm --filter @whalli/backend build
 
 # Production stage
 FROM node:20-alpine AS production
-RUN npm install -g pnpm @nestjs/cli
+RUN npm install -g pnpm
 WORKDIR /app
 
 # Copy package files
