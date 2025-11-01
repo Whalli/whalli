@@ -9,6 +9,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
+import { LogoWide } from '@/components/logo-wide';
 import { Button } from '@whalli/ui';
 import { Loader2 } from 'lucide-react';
 
@@ -47,8 +48,9 @@ export default function AuthPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-zinc-100">Whalli</h1>
+          <div className="mx-auto mb-6 flex justify-center">
+            <LogoWide className="h-12 w-auto" color="white" />
+          </div>
           <p className="text-zinc-400 mt-2">
             {mode === 'login' ? 'Welcome back' : 'Create your account'}
           </p>

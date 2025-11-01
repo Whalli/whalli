@@ -1,8 +1,9 @@
-import { IsString, IsEnum, IsNotEmpty } from 'class-validator';
+import { IsString, IsEnum, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class CreateMessageDto {
   @IsEnum(['USER', 'ASSISTANT', 'SYSTEM'])
-  role: 'USER' | 'ASSISTANT' | 'SYSTEM';
+  @IsOptional()
+  role?: 'USER' | 'ASSISTANT' | 'SYSTEM';
 
   @IsString()
   @IsNotEmpty()

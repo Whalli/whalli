@@ -34,9 +34,9 @@ This document explains how to run Whalli using Docker Compose.
    ```
 
 6. **Access the applications:**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:3001
-   - Admin Dashboard: http://localhost:3002
+   - Backend API: http://localhost:4000
+   - Frontend: http://localhost:4001
+   - Admin Dashboard: http://localhost:4002
 
 ## Individual Service Commands
 
@@ -150,8 +150,9 @@ If ports are already in use, modify them in `.env`:
 ```env
 POSTGRES_PORT=5433
 REDIS_PORT=6380
-BACKEND_PORT=3002
-WEB_PORT=3001
+BACKEND_PORT=4003
+WEB_PORT=4004
+ADMIN_PORT=4005
 ```
 
 ### Clean slate restart
@@ -212,9 +213,9 @@ Services marked as "healthy" are ready to accept connections.
 | `POSTGRES_DB` | Database name | whalli |
 | `POSTGRES_PORT` | PostgreSQL port | 5432 |
 | `REDIS_PORT` | Redis port | 6379 |
-| `BACKEND_PORT` | Backend API port | 3001 |
-| `WEB_PORT` | Frontend port | 3000 |
-| `ADMIN_PORT` | Admin dashboard port | 3002 |
+| `BACKEND_PORT` | Backend API external port | 4000 |
+| `WEB_PORT` | Frontend external port | 4001 |
+| `ADMIN_PORT` | Admin dashboard external port | 4002 |
 | `JWT_SECRET` | JWT signing secret | (required) |
 | `JWT_REFRESH_SECRET` | JWT refresh token secret | (required) |
 | `OPENAI_API_KEY` | OpenAI API key | (required) |
@@ -230,7 +231,7 @@ Services marked as "healthy" are ready to accept connections.
        │                      │                  │
 ┌──────▼─────┐        ┌───────▼──────┐   ┌──────▼─────┐
 │    Web     │        │    Admin     │   │  Backend   │
-│   :3000    │        │    :3002     │   │   :3001    │
+│ :4001->3000│        │ :4002->3000  │   │ :4000->3000│
 └────────────┘        └──────────────┘   └──────┬─────┘
                                                 │
                                     ┌───────────┼───────────┐

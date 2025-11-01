@@ -152,7 +152,7 @@ export class ChatService {
 
     const message = await this.prisma.message.create({
       data: {
-        role: createMessageDto.role,
+        role: createMessageDto.role || 'USER',
         content: createMessageDto.content,
         chatId,
       },

@@ -24,7 +24,7 @@ RUN pnpm --filter @whalli/prisma generate
 # Development stage
 FROM base AS development
 WORKDIR /app
-EXPOSE 3001
+EXPOSE 3000
 CMD ["pnpm", "--filter", "@whalli/backend", "dev"]
 
 # Build stage
@@ -52,5 +52,5 @@ RUN pnpm install --prod --frozen-lockfile
 # Generate Prisma Client
 RUN pnpm --filter @whalli/prisma generate
 
-EXPOSE 3001
+EXPOSE 3000
 CMD ["node", "apps/backend/dist/main.js"]
