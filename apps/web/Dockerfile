@@ -15,7 +15,7 @@ COPY tsconfig.json ./
 COPY packages ./packages
 COPY apps/web ./apps/web
 
-# Install dependencies
+# Install dependencies (updated for @nestjs/cli)
 RUN pnpm install --frozen-lockfile
 
 # Development stage
