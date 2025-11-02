@@ -19,8 +19,11 @@ RUN pnpm install --frozen-lockfile
 # Générer le client Prisma
 RUN cd packages/prisma && pnpm run generate
 
+# Build l'application backend
+RUN pnpm --filter @whalli/backend build
+
 # Exposer le port
 EXPOSE 3000
 
-# Démarrer en mode développement avec hot-reload
-CMD ["pnpm", "--filter", "@whalli/backend", "dev"]
+# Démarrer en mode production
+CMD ["pnpm", "--filter", "@whalli/backend", "start"]
