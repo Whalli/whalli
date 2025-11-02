@@ -64,8 +64,8 @@ services:
       - ./apps/backend/src:/app/apps/backend/src
       - ./packages:/app/packages
       - /app/node_modules
-    working_dir: /app/apps/backend
-    command: bun run dev
+    working_dir: /app
+    command: bun --watch apps/backend/src/main.ts
     networks:
       - whalli-network
 
