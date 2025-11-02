@@ -22,6 +22,9 @@ RUN rm -rf packages/prisma/generated || true
 # Générer le client Prisma avec les bons binaires Linux
 RUN cd packages/prisma && pnpm run generate
 
+# Vérifier que les binaires nécessaires ont été générés
+RUN ls -la packages/prisma/generated/client/libquery_engine-*.so.node
+
 # Exposer le port
 EXPOSE 3000
 
