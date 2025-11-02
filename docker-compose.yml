@@ -65,7 +65,8 @@ services:
       - ./packages:/app/packages
       - /app/node_modules
       - /app/apps/backend/node_modules
-    command: pnpm --filter @whalli/backend dev
+    working_dir: /app/apps/backend
+    command: bun run dev
     networks:
       - whalli-network
 
