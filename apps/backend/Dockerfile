@@ -20,10 +20,13 @@ RUN pnpm install --frozen-lockfile
 RUN cd packages/prisma && pnpm run generate
 
 # Build l'application backend
-RUN pnpm --filter @whalli/backend build
+RUN cd apps/backend && pnpm run build
 
 # Exposer le port
 EXPOSE 3000
 
+# Définir le répertoire de travail pour le backend
+WORKDIR /app/apps/backend
+
 # Démarrer en mode production
-CMD ["pnpm", "--filter", "@whalli/backend", "start"]
+CMD ["node", "dist/main.js"]
