@@ -62,10 +62,11 @@ services:
       - "${BACKEND_PORT:-4000}:3000"
     volumes:
       - ./apps/backend/src:/app/apps/backend/src
+      - ./apps/backend/tsconfig.json:/app/apps/backend/tsconfig.json
       - ./packages:/app/packages
       - /app/node_modules
     working_dir: /app
-    command: bun --watch apps/backend/src/main.ts
+    command: bun --watch --tsconfig-override apps/backend/tsconfig.json apps/backend/src/main.ts
     networks:
       - whalli-network
 
