@@ -52,6 +52,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV:-development}
+      NODE_PATH: /app/node_modules
       PORT: 3000
       DATABASE_URL: ${DATABASE_URL:-postgresql://whalli:whalli_dev_password@postgres:5432/whalli?schema=public}
       REDIS_URL: redis://redis:6379
@@ -61,12 +62,13 @@ services:
     ports:
       - "${BACKEND_PORT:-4000}:3000"
     volumes:
-      - ./apps/backend/src:/app/apps/backend/src
-      - ./apps/backend/tsconfig.json:/app/apps/backend/tsconfig.json
+      - ./apps/backend:/app/apps/backend
       - ./packages:/app/packages
       - /app/node_modules
-    working_dir: /app
-    command: bun --watch --tsconfig-override apps/backend/tsconfig.json apps/backend/src/main.ts
+      - /app/apps/backend/node_modules
+      - /app/apps/backend/dist
+    working_dir: /app/apps/backend
+    command: bun --watch src/main.ts
     networks:
       - whalli-network
 
