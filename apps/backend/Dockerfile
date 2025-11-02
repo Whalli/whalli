@@ -1,4 +1,8 @@
-FROM oven/bun:1-alpine AS base
+FROM node:20-alpine AS base
+
+# Install pnpm and Bun
+RUN npm install -g pnpm && \
+    npm install -g bun
 
 # Set working directory
 WORKDIR /app
@@ -12,12 +16,12 @@ COPY tsconfig.json ./
 COPY packages ./packages
 COPY apps/backend ./apps/backend
 
-# Install dependencies with Bun (reads pnpm-lock.yaml)
-RUN bun install
+# Install dependencies with pnpm (garantit les dépendances correctes)
+RUN pnpm install --frozen-lockfile
 
 # Generate Prisma Client
 WORKDIR /app/packages/prisma
-RUN bun run generate
+RUN pnpm run generate
 WORKDIR /app
 
 # Development stage
@@ -35,7 +39,8 @@ WORKDIR /app/apps/backend
 RUN bun run build
 
 # Production stage
-FROM oven/bun:1-alpine AS production
+FROM node:20-alpine AS production
+RUN npm install -g pnpm
 WORKDIR /app
 
 # Copy package files
