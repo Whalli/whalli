@@ -37,8 +37,8 @@ FROM oven/bun:1-alpine AS production
 WORKDIR /app
 
 # Copy package files
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY turbo.json ./
+COPY --from=base /app/package.json ./
+COPY --from=base /app/turbo.json ./
 
 # Copy built backend
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
@@ -47,8 +47,8 @@ COPY --from=builder /app/apps/backend/package.json ./apps/backend/
 # Copy packages with generated Prisma Client
 COPY --from=base /app/packages ./packages
 
-# Install production dependencies only
-RUN bun install --production
+# Copy node_modules from base (already installed)
+COPY --from=base /app/node_modules ./node_modules
 
 WORKDIR /app/apps/backend
 EXPOSE 3000
