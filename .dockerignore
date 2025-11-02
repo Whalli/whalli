@@ -3,6 +3,9 @@ node_modules
 .pnp
 .pnp.js
 
+# Prisma generated client (will be generated in container)
+packages/prisma/generated
+
 # Testing
 coverage
 
