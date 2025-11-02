@@ -61,13 +61,9 @@ services:
     ports:
       - "${BACKEND_PORT:-4000}:3000"
     volumes:
-      - ./apps/backend:/app/apps/backend
+      - ./apps/backend/src:/app/apps/backend/src
       - ./packages:/app/packages
       - /app/node_modules
-      - /app/apps/backend/node_modules
-      - /app/packages/utils/node_modules
-      - /app/packages/prisma/node_modules
-      - /app/packages/ui/node_modules
     working_dir: /app/apps/backend
     command: bun run dev
     networks:
