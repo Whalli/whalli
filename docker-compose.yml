@@ -38,5 +38,43 @@ services:
       - ./apps/backend/src:/app/apps/backend/src
       - ./packages:/app/packages
 
+  # Frontend Web (Next.js)
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: development
+    container_name: whalli-web
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+    ports:
+      - "4001:3000"
+    volumes:
+      - ./apps/web/src:/app/apps/web/src
+      - ./apps/web/public:/app/apps/web/public
+      - ./packages:/app/packages
+
+  # Admin Dashboard (Next.js)
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      target: development
+    container_name: whalli-admin
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+    ports:
+      - "4002:3000"
+    volumes:
+      - ./apps/admin/src:/app/apps/admin/src
+      - ./apps/admin/public:/app/apps/admin/public
+      - ./packages:/app/packages
+
 volumes:
   postgres_data:
