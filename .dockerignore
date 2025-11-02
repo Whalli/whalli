@@ -3,9 +3,6 @@ node_modules
 .pnp
 .pnp.js
 
-# Prisma generated client (will be generated in container)
-packages/prisma/generated
-
 # Testing
 coverage
 
@@ -41,6 +38,9 @@ next-env.d.ts
 
 # Turbo
 .turbo
+
+# Prisma generated client (must be regenerated in Docker for correct platform)
+packages/prisma/generated
 
 # Git
 .git
