@@ -43,14 +43,12 @@ COPY turbo.json ./
 # Copy built backend
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
 COPY --from=builder /app/apps/backend/package.json ./apps/backend/
-COPY --from=builder /app/packages ./packages
+
+# Copy packages with generated Prisma Client
+COPY --from=base /app/packages ./packages
 
 # Install production dependencies only
 RUN bun install --production --frozen-lockfile
-
-# Generate Prisma Client
-WORKDIR /app/packages/prisma
-RUN bun run generate
 
 WORKDIR /app/apps/backend
 EXPOSE 3000
