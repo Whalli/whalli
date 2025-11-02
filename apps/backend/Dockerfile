@@ -16,17 +16,14 @@ COPY apps/backend ./apps/backend
 # Installer toutes les dépendances
 RUN pnpm install --frozen-lockfile
 
-# Générer le client Prisma
-RUN cd packages/prisma && pnpm run generate
+# Supprimer explicitement le dossier generated s'il existe (copié depuis macOS)
+RUN rm -rf packages/prisma/generated || true
 
-# Build l'application backend
-RUN cd apps/backend && pnpm run build
+# Générer le client Prisma avec les bons binaires Linux
+RUN cd packages/prisma && pnpm run generate
 
 # Exposer le port
 EXPOSE 3000
 
-# Définir le répertoire de travail pour le backend
-WORKDIR /app/apps/backend
-
-# Démarrer en mode production
-CMD ["node", "dist/main.js"]
+# Démarrer avec ts-node pour éviter les problèmes de chemins hardcodés
+CMD ["pnpm", "--filter", "@whalli/backend", "start:dev"]
