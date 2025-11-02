@@ -4,16 +4,16 @@ FROM oven/bun:1-alpine AS base
 WORKDIR /app
 
 # Copy workspace files
-COPY package.json bun.lockb* ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY turbo.json ./
 COPY tsconfig.json ./
 
-# Copy all packages
+# Copy all packages with their package.json
 COPY packages ./packages
 COPY apps/backend ./apps/backend
 
-# Install dependencies
-RUN bun install --frozen-lockfile
+# Install dependencies with Bun (reads pnpm-lock.yaml)
+RUN bun install
 
 # Generate Prisma Client
 WORKDIR /app/packages/prisma
@@ -37,7 +37,7 @@ FROM oven/bun:1-alpine AS production
 WORKDIR /app
 
 # Copy package files
-COPY package.json bun.lockb* ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY turbo.json ./
 
 # Copy built backend
@@ -48,7 +48,7 @@ COPY --from=builder /app/apps/backend/package.json ./apps/backend/
 COPY --from=base /app/packages ./packages
 
 # Install production dependencies only
-RUN bun install --production --frozen-lockfile
+RUN bun install --production
 
 WORKDIR /app/apps/backend
 EXPOSE 3000
