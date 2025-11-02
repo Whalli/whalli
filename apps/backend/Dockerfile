@@ -24,6 +24,8 @@ WORKDIR /app
 FROM base AS development
 WORKDIR /app/apps/backend
 ENV NODE_ENV=development
+# Create symlink to node_modules at root
+RUN ln -sf /app/node_modules ./node_modules
 EXPOSE 3000
 CMD ["bun", "run", "dev"]
 
