@@ -1,31 +1,10 @@
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:16-alpine
-    container_name: whalli-postgres
-    environment:
-      POSTGRES_USER: whalli
-      POSTGRES_PASSWORD: whalli_dev_password
-      POSTGRES_DB: whalli
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U whalli"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # Backend API (NestJS)
   backend:
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
     container_name: whalli-backend
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
       NODE_ENV: development
       PORT: 3000
@@ -76,6 +55,3 @@ services:
       - ./apps/admin/src:/app/apps/admin/src
       - ./apps/admin/public:/app/apps/admin/public
       - ./packages:/app/packages
-
-volumes:
-  postgres_data:
