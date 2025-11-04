@@ -187,11 +187,11 @@ const config = {
       },
       {
         "fromEnvVar": null,
-        "value": "linux-musl-openssl-3.0.x"
+        "value": "debian-openssl-3.0.x"
       },
       {
         "fromEnvVar": null,
-        "value": "linux-musl-arm64-openssl-3.0.x"
+        "value": "linux-arm64-openssl-3.0.x"
       }
     ],
     "previewFeatures": [],
@@ -218,8 +218,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider      = \"prisma-client-js\"\n  output        = \"./generated/client\"\n  binaryTargets = [\"native\", \"linux-musl-openssl-3.0.x\", \"linux-musl-arm64-openssl-3.0.x\"]\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nenum UserRole {\n  USER\n  ADMIN\n  MODERATOR\n}\n\nenum MessageRole {\n  USER\n  ASSISTANT\n  SYSTEM\n}\n\n// User model - represents application users\nmodel User {\n  id        String   @id @default(cuid())\n  email     String   @unique\n  name      String?\n  password  String\n  role      UserRole @default(USER)\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  // Relations\n  presets Preset[]\n  chats   Chat[]\n\n  @@map(\"users\")\n}\n\n// Preset model - AI conversation presets/templates\nmodel Preset {\n  id                String   @id @default(cuid())\n  name              String\n  color             String   @default(\"#3B82F6\") // Hex color for UI\n  systemInstruction String   @db.Text // System prompt/instruction\n  userId            String\n  createdAt         DateTime @default(now())\n  updatedAt         DateTime @updatedAt\n\n  // Relations\n  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)\n  chats Chat[]\n\n  @@index([userId])\n  @@map(\"presets\")\n}\n\n// Chat model - represents a conversation\nmodel Chat {\n  id        String   @id @default(cuid())\n  title     String\n  model     String   @default(\"gpt-4\") // AI model identifier\n  presetId  String? // Optional preset reference\n  userId    String\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  // Relations\n  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)\n  preset   Preset?   @relation(fields: [presetId], references: [id], onDelete: SetNull)\n  messages Message[]\n\n  @@index([userId])\n  @@index([presetId])\n  @@map(\"chats\")\n}\n\n// Message model - individual messages in a chat\nmodel Message {\n  id        String      @id @default(cuid())\n  role      MessageRole\n  content   String      @db.Text\n  chatId    String\n  createdAt DateTime    @default(now())\n  updatedAt DateTime    @updatedAt\n\n  // Relations\n  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)\n\n  @@index([chatId])\n  @@map(\"messages\")\n}\n",
-  "inlineSchemaHash": "7886f15cccae3e2088863d68ce3664255847329fac82c09455c1d3798cc7e3b4",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider      = \"prisma-client-js\"\n  output        = \"./generated/client\"\n  binaryTargets = [\"native\", \"debian-openssl-3.0.x\", \"linux-arm64-openssl-3.0.x\"]\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nenum UserRole {\n  USER\n  ADMIN\n  MODERATOR\n}\n\nenum MessageRole {\n  USER\n  ASSISTANT\n  SYSTEM\n}\n\n// User model - represents application users\nmodel User {\n  id        String   @id @default(cuid())\n  email     String   @unique\n  name      String?\n  password  String\n  role      UserRole @default(USER)\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  // Relations\n  presets Preset[]\n  chats   Chat[]\n\n  @@map(\"users\")\n}\n\n// Preset model - AI conversation presets/templates\nmodel Preset {\n  id                String   @id @default(cuid())\n  name              String\n  color             String   @default(\"#3B82F6\") // Hex color for UI\n  systemInstruction String   @db.Text // System prompt/instruction\n  userId            String\n  createdAt         DateTime @default(now())\n  updatedAt         DateTime @updatedAt\n\n  // Relations\n  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)\n  chats Chat[]\n\n  @@index([userId])\n  @@map(\"presets\")\n}\n\n// Chat model - represents a conversation\nmodel Chat {\n  id        String   @id @default(cuid())\n  title     String\n  model     String   @default(\"gpt-4\") // AI model identifier\n  presetId  String? // Optional preset reference\n  userId    String\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  // Relations\n  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)\n  preset   Preset?   @relation(fields: [presetId], references: [id], onDelete: SetNull)\n  messages Message[]\n\n  @@index([userId])\n  @@index([presetId])\n  @@map(\"chats\")\n}\n\n// Message model - individual messages in a chat\nmodel Message {\n  id        String      @id @default(cuid())\n  role      MessageRole\n  content   String      @db.Text\n  chatId    String\n  createdAt DateTime    @default(now())\n  updatedAt DateTime    @updatedAt\n\n  // Relations\n  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)\n\n  @@index([chatId])\n  @@map(\"messages\")\n}\n",
+  "inlineSchemaHash": "ccac11bd7117101736abd089e19d79e000e691c7abf7828b9a9e7f6d58b9ca91",
   "copyEngine": true
 }
 
@@ -261,12 +261,12 @@ path.join(__dirname, "libquery_engine-darwin-arm64.dylib.node");
 path.join(process.cwd(), "generated/client/libquery_engine-darwin-arm64.dylib.node")
 
 // file annotations for bundling tools to include these files
-path.join(__dirname, "libquery_engine-linux-musl-openssl-3.0.x.so.node");
-path.join(process.cwd(), "generated/client/libquery_engine-linux-musl-openssl-3.0.x.so.node")
+path.join(__dirname, "libquery_engine-debian-openssl-3.0.x.so.node");
+path.join(process.cwd(), "generated/client/libquery_engine-debian-openssl-3.0.x.so.node")
 
 // file annotations for bundling tools to include these files
-path.join(__dirname, "libquery_engine-linux-musl-arm64-openssl-3.0.x.so.node");
-path.join(process.cwd(), "generated/client/libquery_engine-linux-musl-arm64-openssl-3.0.x.so.node")
+path.join(__dirname, "libquery_engine-linux-arm64-openssl-3.0.x.so.node");
+path.join(process.cwd(), "generated/client/libquery_engine-linux-arm64-openssl-3.0.x.so.node")
 // file annotations for bundling tools to include these files
 path.join(__dirname, "schema.prisma");
 path.join(process.cwd(), "generated/client/schema.prisma")

@@ -1,7 +1,7 @@
-FROM node:20-slim
+FROM node:20-alpine
 
 # Installer pnpm et OpenSSL pour Prisma
-RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/* && npm install -g pnpm
+RUN apk add --no-cache openssl && npm install -g pnpm
 
 # Créer et définir le répertoire de travail
 WORKDIR /app
