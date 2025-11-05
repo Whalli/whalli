@@ -7,16 +7,16 @@
  */
 
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api-client';
 import { usePageWidgets } from '@/contexts/page-context';
-import { ChatHistoryList } from '@/components/chat-history-list';
 import { Button, Textarea } from '@whalli/ui';
-import { Send, Loader2, User, Bot } from 'lucide-react';
+import { Send, Loader2, User, Bot, Sparkles, Edit2, Trash2 } from 'lucide-react';
 import type { Message, Chat } from '@whalli/utils';
 
 export default function ChatDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const chatId = params?.id as string;
   
   const [chat, setChat] = useState<Chat | null>(null);
@@ -24,6 +24,8 @@ export default function ChatDetailPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const loadChat = async () => {
@@ -64,14 +66,106 @@ export default function ChatDetailPage() {
     scrollToBottom();
   }, [messages]);
 
-  // Add chat history to context sidebar
+  // Handle chat actions
+  const handleRename = async () => {
+    if (!newTitle.trim() || !chatId) return;
+    try {
+      await api.updateChat(chatId, { title: newTitle });
+      setChat(prev => prev ? { ...prev, title: newTitle } : null);
+      setRenaming(false);
+      setNewTitle('');
+    } catch (error) {
+      console.error('Failed to rename chat:', error);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!chatId || !confirm('Are you sure you want to delete this chat?')) return;
+    try {
+      await api.deleteChat(chatId);
+      router.push('/chat');
+    } catch (error) {
+      console.error('Failed to delete chat:', error);
+    }
+  };
+
+  // Context sidebar widgets with chat-specific info
   const widgets = useMemo(() => [
     {
-      id: 'chat-history',
-      title: 'Conversations',
-      content: <ChatHistoryList />,
+      id: 'chat-model',
+      title: 'Current Model',
+      content: (
+        <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-blue-500" />
+            <span className="font-medium">{chat?.model || 'Loading...'}</span>
+          </div>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+            AI model for this conversation
+          </p>
+        </div>
+      ),
     },
-  ], []);
+    {
+      id: 'chat-actions',
+      title: 'Actions',
+      content: (
+        <div className="space-y-2">
+          {renaming ? (
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="New chat title"
+                className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <Button onClick={handleRename} size="sm" className="flex-1">
+                  Save
+                </Button>
+                <Button
+                  onClick={() => {
+                    setRenaming(false);
+                    setNewTitle('');
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Button
+                onClick={() => {
+                  setRenaming(true);
+                  setNewTitle(chat?.title || '');
+                }}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                <Edit2 className="w-4 h-4 mr-2" />
+                Rename Chat
+              </Button>
+              <Button
+                onClick={handleDelete}
+                variant="outline"
+                className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Chat
+              </Button>
+            </>
+          )}
+        </div>
+      ),
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [chat, renaming, newTitle]);
   
   usePageWidgets(widgets);
 
@@ -148,36 +242,34 @@ export default function ChatDetailPage() {
               </div>
 
               {/* Message Content */}
-              <div className={`
-                flex-1 max-w-3xl
-                ${message.role === 'USER' ? 'text-right' : ''}
-              `}>
-                <div className={`
-                  inline-block p-4 rounded-2xl
-                  ${message.role === 'USER'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-zinc-800 text-zinc-100'
-                  }
-                `}>
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+              {message.role === 'USER' ? (
+                <div className="flex-1 max-w-3xl text-right">
+                  <div className="inline-block p-4 rounded-2xl bg-blue-600 text-white">
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  </div>
+                  <p className="text-xs text-zinc-600 mt-2">
+                    {new Date(message.createdAt).toLocaleTimeString()}
+                  </p>
                 </div>
-                <p className="text-xs text-zinc-600 mt-2">
-                  {new Date(message.createdAt).toLocaleTimeString()}
-                </p>
-              </div>
+              ) : (
+                <div className="flex-1">
+                  <p className="whitespace-pre-wrap text-zinc-100">{message.content}</p>
+                  <p className="text-xs text-zinc-600 mt-2">
+                    {new Date(message.createdAt).toLocaleTimeString()}
+                  </p>
+                </div>
+              )}
             </div>
           ))
         )}
         
         {sending && (
           <div className="flex gap-4">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
               <Bot className="w-4 h-4 text-white" />
             </div>
-            <div className="flex-1 max-w-3xl">
-              <div className="inline-block p-4 rounded-2xl bg-zinc-800">
-                <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />
-              </div>
+            <div className="flex-1">
+              <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />
             </div>
           </div>
         )}
