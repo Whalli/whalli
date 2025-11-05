@@ -2,46 +2,89 @@
 
 /**
  * Layout Shell
- * Main application layout wrapper
+ * Main application layout wrapper with sidebar support
  */
 
 import { forwardRef, HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@whalli/utils';
 
-export interface LayoutShellProps extends HTMLAttributes<HTMLDivElement> {
+export interface LayoutShellProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
+  /** Primary sidebar (left) - always visible on desktop, collapsible on mobile */
+  primarySidebar: ReactNode;
+  /** Main content area */
   children: ReactNode;
+  /** Context sidebar (right) - optional, collapsible */
+  contextSidebar?: ReactNode;
+  /** Whether to show the context sidebar */
+  showContextSidebar?: boolean;
   className?: string;
 }
 
 /**
  * Layout Shell Component
  * 
- * Main application layout container
+ * Main application layout with three-column structure:
+ * - Primary Sidebar (left, fixed width, responsive)
+ * - Main Content (center, flexible)
+ * - Context Sidebar (right, collapsible, optional)
  * 
  * @example
  * ```tsx
- * <SidebarProvider>
- *   <LayoutShell>
- *     <Sidebar>...</Sidebar>
- *     <LayoutMain>
- *       <Topbar>...</Topbar>
- *       <LayoutContent>
- *         <main>...</main>
- *       </LayoutContent>
- *     </LayoutMain>
- *   </LayoutShell>
- * </SidebarProvider>
+ * <LayoutShell
+ *   primarySidebar={<PrimarySidebar />}
+ *   contextSidebar={<ContextSidebar />}
+ *   showContextSidebar={true}
+ * >
+ *   <main>Content here</main>
+ * </LayoutShell>
  * ```
  */
 export const LayoutShell = forwardRef<HTMLDivElement, LayoutShellProps>(
-  ({ children, className, ...props }, ref) => {
+  ({ primarySidebar, children, contextSidebar, showContextSidebar = false, className, ...props }, ref) => {
     return (
       <div
         ref={ref}
-        className={cn('flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950', className)}
+        className={cn(
+          'flex h-screen w-full overflow-hidden',
+          'bg-white dark:bg-gray-950',
+          'text-gray-900 dark:text-gray-100',
+          className
+        )}
         {...props}
       >
-        {children}
+        {/* Primary Sidebar - Left */}
+        <aside
+          className={cn(
+            'flex-shrink-0 w-64 border-r',
+            'border-gray-200 dark:border-gray-800',
+            'bg-white dark:bg-gray-950',
+            'transition-all duration-300 ease-in-out',
+            'hidden lg:block'
+          )}
+        >
+          {primarySidebar}
+        </aside>
+
+        {/* Main Content - Center */}
+        <main className="flex-1 overflow-hidden">
+          {children}
+        </main>
+
+        {/* Context Sidebar - Right */}
+        {contextSidebar && (
+          <aside
+            className={cn(
+              'flex-shrink-0 w-80 border-l',
+              'border-gray-200 dark:border-gray-800',
+              'bg-white dark:bg-gray-950',
+              'transition-all duration-300 ease-in-out',
+              'hidden xl:block',
+              showContextSidebar ? 'translate-x-0' : 'translate-x-full xl:hidden'
+            )}
+          >
+            {contextSidebar}
+          </aside>
+        )}
       </div>
     );
   }
